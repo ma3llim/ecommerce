@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: ecommerce-application
+
+  datasource:
+    url: ${PG_URL}
+    username: ${PG_USER}
+    password: ${PG_PASSWORD}

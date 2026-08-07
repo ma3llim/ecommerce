@@ -3,12 +3,12 @@
  */
 package org.ecommerce;
 
-public class EcommerceApplication {
-    public String getGreeting() {
-        return "Hello World!";
-    }
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+@SpringBootApplication
+public class EcommerceApplication {
     public static void main(String[] args) {
-        System.out.println(new EcommerceApplication().getGreeting());
+        SpringApplication.run(EcommerceApplication.class, args);
     }
 }
