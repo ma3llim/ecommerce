@@ -8,7 +8,12 @@
 plugins {
     // Apply the application plugin to add support for building a CLI application in Java.
     id 'application'
+    id 'org.springframework.boot' version '3.5.4'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
+
+group = "org.ecommerce"
+version = "1.0.0"
 
 repositories {
     // Use Maven Central for resolving dependencies.
@@ -16,11 +21,36 @@ repositories {
 }
 
 dependencies {
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    // Spring Data JPA
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // Validation
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // model mapper
+    implementation 'org.modelmapper:modelmapper:3.2.6'
+    // spring security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    // JWT (JJWT)
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.7'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.7'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.7'
+    // Postgresql
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // Testing
     // Use JUnit test framework.
     testImplementation libs.junit
-
     // This dependency is used by the application.
     implementation libs.guava
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    // Lombok for tests
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -32,5 +62,5 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = 'org.example.App'
+    mainClass = 'org.ecommerce.EcommerceAplication'
 }
