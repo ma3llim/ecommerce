@@ -34,7 +34,6 @@ public class OtpVerification {
     @NotNull
     private UUID userId;
     private String otpCode;
-    private String verificationToken;
     private Instant expiresAt;
     private Instant verifiedAt;
 
