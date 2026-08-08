@@ -75,8 +75,9 @@ public class AuthService {
 
         // Last Log
         log.info("User registration completed successfully: userId={}", user.getId());
-        
+
         return RegisterUserResponseDto.builder()
+                .userId(user.getId())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .email(user.getEmail())

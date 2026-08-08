@@ -1,7 +1,13 @@
 package org.ecommerce.common.exception;
 
-public class ResourceAlreadyExistsException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class ResourceAlreadyExistsException extends BusinessException {
     public ResourceAlreadyExistsException(String message) {
-        super(message);
+        super(
+                message,
+                HttpStatus.CONFLICT,
+                "RESOURCE_ALREADY_EXISTS"
+        );
     }
 }

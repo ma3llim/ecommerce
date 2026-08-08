@@ -5,9 +5,12 @@ import lombok.Getter;
 import org.ecommerce.auth.enums.AccountStatus;
 import org.ecommerce.auth.enums.Role;
 
+import java.util.UUID;
+
 @Getter
 @Builder
 public class RegisterUserResponseDto {
+    private UUID userId;
     private String firstName;
     private String lastName;
     private String email;
