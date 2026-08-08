@@ -11,7 +11,6 @@ public class SlackTemplateService {
             SlackTemplate template,
             Map<String, Object> data) {
         return switch (template) {
-
             case USER_REGISTERED -> buildUserRegisteredMessage(data);
         };
     }
@@ -19,22 +18,33 @@ public class SlackTemplateService {
     private String buildUserRegisteredMessage(
             Map<String, Object> data
     ) {
-
+        String userId = String.valueOf(data.get("userId"));
         String userName = String.valueOf(data.get("userName"));
         String email = String.valueOf(data.get("email"));
+        String role = String.valueOf(data.get("role"));
+        String registeredAt = String.valueOf(data.get("registeredAt"));
+        String provider = String.valueOf(data.get("provider"));
 
         return """
-                🛒 *E-Commerce Notification*
+                🛒 *E-Commerce — New User Registration*
                 
                 *Event:* USER_REGISTERED
+                *Status:* ✅ Registration successful
                 
-                *User:* %s
-                *Email:* %s
-                
-                *Status:* Registration successful
+                *User Details*
+                • *User ID:* %s
+                • *Name:* %s
+                • *Email:* %s
+                • *Role:* %s
+                • *Provider:* %s
+                • *Registered At:* %s
                 """.formatted(
+                userId,
                 userName,
-                email
+                email,
+                role,
+                provider,
+                registeredAt
         );
     }
 }
