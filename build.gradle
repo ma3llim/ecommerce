@@ -42,10 +42,6 @@ dependencies {
     runtimeOnly 'org.postgresql:postgresql'
 
     // Testing
-    // Use JUnit test framework.
-    testImplementation libs.junit
-    // This dependency is used by the application.
-    implementation libs.guava
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     // Lombok for tests
@@ -63,4 +59,8 @@ java {
 application {
     // Define the main class for the application.
     mainClass = 'org.ecommerce.EcommerceAplication'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }

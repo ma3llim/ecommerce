@@ -11,3 +11,17 @@ app:
   cors:
     allowed-origins:
       - http://localhost:5173
+
+  jwt:
+    secret: ${JWT_SECRET}
+    issuer: ${JWT_ISSUER}
+    access-token-expiration: ${JWT_ACCESS_EXPIRATION}
+    refresh-token-expiration: ${JWT_REFRESH_EXPIRATION}
+
+  cookie:
+    access-token-name: access_token
+    refresh-token-name: refresh_token
+    secure: ${COOKIE_SECURE}
+    http-only: true
+    same-site: ${COOKIE_SAME_SITE}
+    path: /
