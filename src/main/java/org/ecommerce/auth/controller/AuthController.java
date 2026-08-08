@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.auth.Dtos.request.RegisterUserRequestDto;
+import org.ecommerce.auth.Dtos.request.VerifyEmailRequestDto;
 import org.ecommerce.auth.Dtos.response.RegisterUserResponseDto;
 import org.ecommerce.auth.service.AuthService;
 import org.ecommerce.common.response.ApiSuccessResponse;
@@ -34,5 +35,10 @@ public class AuthController {
                         .path(request.getRequestURI())
                         .build()
                 );
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiSuccessResponse<?>> verifyEmail(@Valid @RequestBody VerifyEmailRequestDto verifyEmailRequest) {
+        authService.verifyEmail(verifyEmailRequest);
     }
 }
