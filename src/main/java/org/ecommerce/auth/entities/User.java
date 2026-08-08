@@ -66,4 +66,8 @@ public class User {
     @LastModifiedDate
     @Column(nullable = false)
     private Instant updatedAt;
+
+    public String getFullName() {
+        return this.firstName + " " + this.lastName;
+    }
 }

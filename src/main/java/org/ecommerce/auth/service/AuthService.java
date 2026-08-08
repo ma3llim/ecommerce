@@ -14,12 +14,17 @@ import org.ecommerce.auth.utils.PasswordUtils;
 import org.ecommerce.auth.utils.TokenUtils;
 import org.ecommerce.common.constants.AppConstants;
 import org.ecommerce.common.exception.ResourceAlreadyExistsException;
+import org.ecommerce.common.notification.dtos.NotificationRequest;
+import org.ecommerce.common.notification.enums.channel.NotificationChannel;
+import org.ecommerce.common.notification.enums.channel.NotificationEvent;
 import org.ecommerce.common.notification.service.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -72,6 +77,7 @@ public class AuthService {
 
 
         // send mail
+        sendOtpMail(user.getFullName(), otp, String.valueOf(AppConstants.OTP_TOKEN_EXPIRY_MINUTES), user.getEmail());
 
         // Last Log
         log.info("User registration completed successfully: userId={}", user.getId());
@@ -85,5 +91,24 @@ public class AuthService {
                 .accountStatus(user.getAccountStatus())
                 .role(user.getRole())
                 .build();
+    }
+
+
+    // Notifications Functions
+    // Send OTP to user
+    private void sendOtpMail(String fullName, String otp, String expiryMinutes, String recipientEmail) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("fullName", fullName);
+        data.put("otp", otp);
+        data.put("expiryMinutes", expiryMinutes);
+
+        NotificationRequest request = NotificationRequest.builder()
+                .channel(NotificationChannel.EMAIL)
+                .event(NotificationEvent.OTP_VERIFICATION)
+                .recipient(recipientEmail)
+                .data(data)
+                .build();
+
+        notificationService.send(request);
     }
 }
