@@ -7,6 +7,9 @@ spring:
     username: ${PG_USER}
     password: ${PG_PASSWORD}
 
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
 app:
   cors:
     allowed-origins:
