@@ -27,6 +27,9 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
+slack:
+  webhook-url: ${SLACK_WEBHOOK_URL}
+
 app:
   cors:
     allowed-origins:

@@ -1,9 +1,9 @@
-package org.ecommerce.common.notification.dtos.request;
+package org.ecommerce.common.notification.dtos;
 
 import lombok.Builder;
 import lombok.Getter;
-import org.ecommerce.common.notification.enums.NotificationChannel;
-import org.ecommerce.common.notification.enums.NotificationEvent;
+import org.ecommerce.common.notification.enums.channel.NotificationChannel;
+import org.ecommerce.common.notification.enums.channel.NotificationEvent;
 
 import java.util.Map;
 

@@ -14,6 +14,7 @@ import org.ecommerce.auth.utils.PasswordUtils;
 import org.ecommerce.auth.utils.TokenUtils;
 import org.ecommerce.common.constants.AppConstants;
 import org.ecommerce.common.exception.ResourceAlreadyExistsException;
+import org.ecommerce.common.notification.service.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final OtpVerificationRepository otpVerificationRepository;
     private final PasswordUtils passwordUtils;
+    private final NotificationService notificationService;
 
     @Transactional
     public RegisterUserResponseDto registerUser(RegisterUserRequestDto requestDto) {
@@ -51,14 +53,12 @@ public class AuthService {
 
         // Generate Otp and Verification Code
         String otp = TokenUtils.generateOtp();
-        String verificationToken = TokenUtils.generateRandomToken();
 
         // save otp
         OtpVerification otpVerification = OtpVerification.builder()
                 .purpose(OtpPurpose.EMAIL_VERIFICATION)
                 .userId(user.getId())
                 .otpCode(otp)
-                .verificationToken(verificationToken)
                 .expiresAt(Instant.now().plus(AppConstants.OTP_TOKEN_EXPIRY_MINUTES, ChronoUnit.MINUTES))
                 .status(OtpStatus.PENDING)
                 .build();
