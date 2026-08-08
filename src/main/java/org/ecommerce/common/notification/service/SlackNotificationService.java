@@ -1,6 +1,8 @@
 package org.ecommerce.common.notification.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.ecommerce.common.exception.NotificationException;
 import org.ecommerce.common.notification.dtos.NotificationRequest;
 import org.ecommerce.common.notification.enums.channel.NotificationEvent;
 import org.ecommerce.common.notification.enums.template.SlackTemplate;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SlackNotificationService {
     private final SlackTemplateService slackTemplateService;
     private final SlackProvider slackProvider;
@@ -21,7 +24,14 @@ public class SlackNotificationService {
                 request.getData()
         );
 
-        slackProvider.send(message);
+        try {
+            slackProvider.send(message);
+            log.info("Slack notification sent successfully: event={}, template={}", request.getEvent(), template);
+        } catch (Exception exception) {
+            log.error("Slack notification sending failed: event={}, template={}", request.getEvent(), template,
+                    exception);
+            throw new NotificationException("Failed to send Slack notification");
+        }
     }
 
     private SlackTemplate resolveTemplate(NotificationEvent event) {
