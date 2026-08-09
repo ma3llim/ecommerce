@@ -74,7 +74,7 @@ public class AuthController {
         UserAndTokenResponseDto userAndToken = authService.login(loginData);
 
         cookieUtils.setAuthCookies(response, userAndToken.accessToken(), userAndToken.refreshToken());
-        log.info("Login successful, authentication cookies set for userId={}", userAndToken.userResponseDto().getUserId());
+        log.info("Login successful, authentication cookies set for userId={}", userAndToken.userResponseDto().getId());
 
         return ResponseEntity.ok()
                 .body(ApiSuccessResponse.<UserResponseDto>builder()
@@ -95,7 +95,7 @@ public class AuthController {
         UserAndTokenResponseDto userAndTokenResponseDto = authService.refreshToken(refreshToken);
         cookieUtils.setAuthCookies(response, userAndTokenResponseDto.accessToken(), userAndTokenResponseDto.refreshToken());
 
-        log.info("Authentication tokens refreshed successfully, cookies updated for userId={}", userAndTokenResponseDto.userResponseDto().getUserId());
+        log.info("Authentication tokens refreshed successfully, cookies updated for userId={}", userAndTokenResponseDto.userResponseDto().getId());
 
         return ResponseEntity.ok()
                 .body(ApiSuccessResponse.<UserResponseDto>builder()
