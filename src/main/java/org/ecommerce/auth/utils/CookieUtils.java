@@ -1,5 +1,7 @@
 package org.ecommerce.auth.utils;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.common.config.properties.CookieProperties;
@@ -57,5 +59,27 @@ public class CookieUtils {
                 HttpHeaders.SET_COOKIE,
                 cookie.toString()
         );
+    }
+
+    public String getAccessToken(HttpServletRequest request) {
+        return getCookieValue(request, cookieProperties.getAccessTokenName());
+    }
+
+    public String getRefreshToken(HttpServletRequest request) {
+        return getCookieValue(request, cookieProperties.getRefreshTokenName());
+    }
+
+    private String getCookieValue(HttpServletRequest request, String cookieName) {
+        Cookie[] cookies = request.getCookies();
+
+        if (cookies == null) {
+            return null;
+        }
+        for (Cookie cookie : cookies) {
+            if (cookieName.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 }

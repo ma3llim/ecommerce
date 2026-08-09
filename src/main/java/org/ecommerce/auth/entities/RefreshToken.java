@@ -19,7 +19,6 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 public class RefreshToken {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false)
@@ -38,6 +37,7 @@ public class RefreshToken {
     private Instant createdAt;
 
     @Builder.Default
+    @Column(nullable = false)
     private boolean isRevoked = false;
 
     @LastModifiedDate

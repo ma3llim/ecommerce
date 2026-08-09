@@ -1,5 +1,7 @@
 package org.ecommerce.auth.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,12 +26,14 @@ import org.ecommerce.common.config.properties.JwtProperties;
 import org.ecommerce.common.constants.AppConstants;
 import org.ecommerce.common.exception.ResourceAlreadyExistsException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
+import org.ecommerce.common.exception.UnauthorizedException;
 import org.ecommerce.common.notification.dtos.NotificationRequest;
 import org.ecommerce.common.notification.enums.channel.NotificationChannel;
 import org.ecommerce.common.notification.enums.channel.NotificationEvent;
 import org.ecommerce.common.notification.service.NotificationService;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -48,6 +52,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final JwtProperties jwtProperties;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final ObjectMapper objectMapper;
 
     public UserResponseDto registerUser(RegisterUserRequestDto requestDto) {
         // check user is existed or not
@@ -148,11 +153,13 @@ public class AuthService {
         user.setAccountStatus(AccountStatus.ACTIVE);
 
         // Generate Token
+        UUID tokenId = UUID.randomUUID();
         String accessToken = jwtService.generateAccessToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user, UUID.randomUUID().toString());
+        String refreshToken = jwtService.generateRefreshToken(user, tokenId.toString());
         log.info("Access and refresh tokens generated successfully for userId={}", user.getId());
 
         RefreshToken refreshTokenEntity = RefreshToken.builder()
+                .id(tokenId)
                 .userId(user.getId())
                 .refreshToken(refreshToken)
                 .expiresAt(Instant.now().plusSeconds(jwtProperties.getRefreshTokenExpiration()))
@@ -191,12 +198,13 @@ public class AuthService {
             log.warn("Login attempt with incorrect password, email={}", loginData.getEmail());
             throw new BadCredentialsException("Invalid password");
         }
-
+        UUID tokenId = UUID.randomUUID();
         String accessToken = jwtService.generateAccessToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user, UUID.randomUUID().toString());
+        String refreshToken = jwtService.generateRefreshToken(user, tokenId.toString());
         log.info("Access and refresh tokens generated successfully for userId={}", user.getId());
 
         RefreshToken refreshTokenEntity = RefreshToken.builder()
+                .id(tokenId)
                 .userId(user.getId())
                 .refreshToken(refreshToken)
                 .expiresAt(Instant.now().plusSeconds(jwtProperties.getRefreshTokenExpiration()))
@@ -215,6 +223,71 @@ public class AuthService {
                 .build();
 
         return new UserAndTokenResponseDto(accessToken, refreshToken, userResponseDto);
+    }
+
+    @Transactional
+    public UserAndTokenResponseDto refreshToken(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new UnauthorizedException("Refresh token is required");
+        }
+
+        if (!jwtService.validateRefreshToken(refreshToken)) {
+            log.warn("Invalid refresh token received");
+            throw new UnauthorizedException("Invalid refresh token");
+        }
+        Claims refreshTokenClaims = jwtService.extractClaims(refreshToken);
+
+        // Token ID
+        UUID tokenId = UUID.fromString(jwtService.getJwtId(refreshTokenClaims));
+        UUID userId = jwtService.getUserId(refreshTokenClaims);
+
+        RefreshToken tokenEntity = refreshTokenRepository.findById(tokenId).orElseThrow(() -> {
+            log.warn("Refresh token not found, tokenId={}, userId={}", tokenId, userId);
+            return new UnauthorizedException("Invalid refresh token");
+        });
+
+        if (Instant.now().isAfter(tokenEntity.getExpiresAt())) {
+            log.warn("Refresh token expired in database, userId={}", userId);
+            throw new UnauthorizedException("Invalid refresh token");
+        }
+
+        if (!tokenEntity.getUserId().equals(userId)) {
+            log.warn("Refresh token user mismatch, tokenId={}, userId={}", tokenId, userId);
+            throw new UnauthorizedException("Invalid refresh token");
+        }
+
+        if (tokenEntity.isRevoked()) {
+            log.warn("Attempt to reuse revoked refresh token, userId={}", userId);
+            throw new UnauthorizedException("Invalid refresh token");
+        }
+
+        // check user is existed or not
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("User not found for revoked token, UserId={}", userId);
+            return new ResourceNotFoundException("User not found");
+        });
+        // create new refresh and access token
+        UUID newTokenId = UUID.randomUUID();
+        String newAccessToken = jwtService.generateAccessToken(user);
+        String newRefreshToken = jwtService.generateRefreshToken(user, newTokenId.toString());
+        log.info("Access and refresh tokens generated successfully for userId={}", user.getId());
+
+        tokenEntity.setRevokedByTokenId(newTokenId);
+        tokenEntity.setRevoked(true);
+        refreshTokenRepository.save(tokenEntity);
+
+        //  saving new token
+        RefreshToken newRefreshTokenEntity = RefreshToken.builder()
+                .id(newTokenId)
+                .userId(userId)
+                .refreshToken(newRefreshToken)
+                .expiresAt(Instant.now().plusSeconds(jwtProperties.getRefreshTokenExpiration()))
+                .build();
+
+        refreshTokenRepository.save(newRefreshTokenEntity);
+        UserResponseDto userResponseDto = objectMapper.convertValue(user, UserResponseDto.class);
+
+        return new UserAndTokenResponseDto(newAccessToken, newRefreshToken, userResponseDto);
     }
 
     // Notifications Functions

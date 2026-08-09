@@ -85,4 +85,25 @@ public class AuthController {
                         .build()
                 );
     }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ApiSuccessResponse<UserResponseDto>> refreshToken(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        String refreshToken = cookieUtils.getRefreshToken(request);
+        UserAndTokenResponseDto userAndTokenResponseDto = authService.refreshToken(refreshToken);
+        cookieUtils.setAuthCookies(response, userAndTokenResponseDto.accessToken(), userAndTokenResponseDto.refreshToken());
+
+        log.info("Authentication tokens refreshed successfully, cookies updated for userId={}", userAndTokenResponseDto.userResponseDto().getUserId());
+
+        return ResponseEntity.ok()
+                .body(ApiSuccessResponse.<UserResponseDto>builder()
+                        .success(true)
+                        .message("Refresh Token Successfully")
+                        .data(userAndTokenResponseDto.userResponseDto())
+                        .path(request.getRequestURI())
+                        .build()
+                );
+    }
 }
