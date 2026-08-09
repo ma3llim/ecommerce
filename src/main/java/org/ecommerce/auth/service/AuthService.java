@@ -98,16 +98,7 @@ public class AuthService {
 
         // Last Log
         log.info("User registration completed successfully: userId={}", user.getId());
-
-        return UserResponseDto.builder()
-                .userId(user.getId())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .email(user.getEmail())
-                .emailVerified(user.isEmailVerified())
-                .accountStatus(user.getAccountStatus())
-                .role(user.getRole())
-                .build();
+        return objectMapper.convertValue(user, UserResponseDto.class);
     }
 
     public UserAndTokenResponseDto verifyEmail(VerifyEmailRequestDto verifyEmailRequest) {
@@ -166,15 +157,8 @@ public class AuthService {
                 .build();
 
         refreshTokenRepository.save(refreshTokenEntity);
-        UserResponseDto userResponseDto = UserResponseDto.builder()
-                .userId(user.getId())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .email(user.getEmail())
-                .emailVerified(user.isEmailVerified())
-                .accountStatus(user.getAccountStatus())
-                .role(user.getRole())
-                .build();
+
+        UserResponseDto userResponseDto = objectMapper.convertValue(user, UserResponseDto.class);
 
         return new UserAndTokenResponseDto(accessToken, refreshToken, userResponseDto);
     }
@@ -212,15 +196,7 @@ public class AuthService {
 
         refreshTokenRepository.save(refreshTokenEntity);
 
-        UserResponseDto userResponseDto = UserResponseDto.builder()
-                .userId(user.getId())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .email(user.getEmail())
-                .emailVerified(user.isEmailVerified())
-                .accountStatus(user.getAccountStatus())
-                .role(user.getRole())
-                .build();
+        UserResponseDto userResponseDto = objectMapper.convertValue(user, UserResponseDto.class);
 
         return new UserAndTokenResponseDto(accessToken, refreshToken, userResponseDto);
     }
