@@ -182,6 +182,9 @@ public class AuthService {
             log.warn("Login attempt with incorrect password, email={}", loginData.getEmail());
             throw new BadCredentialsException("Invalid password");
         }
+        // updating user last time
+        user.setLastLoginAt(Instant.now());
+        
         UUID tokenId = UUID.randomUUID();
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user, tokenId.toString());
