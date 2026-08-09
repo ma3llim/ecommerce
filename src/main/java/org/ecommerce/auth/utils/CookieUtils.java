@@ -51,9 +51,8 @@ public class CookieUtils {
                 .httpOnly(cookieProperties.isHttpOnly())
                 .sameSite(cookieProperties.getSameSite())
                 .path(cookieProperties.getPath())
-                .maxAge(Duration.ofMillis(maxAgeSeconds))
+                .maxAge(Duration.ofSeconds(maxAgeSeconds))
                 .build();
-
         response.addHeader(
                 HttpHeaders.SET_COOKIE,
                 cookie.toString()
