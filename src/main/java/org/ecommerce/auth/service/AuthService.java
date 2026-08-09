@@ -108,7 +108,7 @@ public class AuthService {
                 user.getId(),
                 OtpPurpose.EMAIL_VERIFICATION,
                 OtpStatus.PENDING).orElseThrow(() -> {
-            log.warn("Invalid OTP for userId={}", user.getId());
+            log.warn("Pending OTP not found for userId={}", user.getId());
             return new BadCredentialsException("Invalid OTP");
         });
 
@@ -118,6 +118,8 @@ public class AuthService {
 
         if (Instant.now().isAfter(otpVerification.getExpiresAt())) {
             otpVerification.setStatus(OtpStatus.EXPIRED);
+            otpVerificationRepository.save(otpVerification);
+
             throw new BadCredentialsException("OTP has expired");
         }
 

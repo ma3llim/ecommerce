@@ -3,21 +3,24 @@ package org.ecommerce.common.notification.service;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.common.exception.NotificationException;
 import org.ecommerce.common.notification.dtos.NotificationRequest;
+import org.ecommerce.common.notification.enums.channel.NotificationChannel;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
     private final EmailNotificationService emailNotificationService;
-    private final SlackNotificationService slackNotificationService;
 
+    @Async
     @Override
     public void send(NotificationRequest request) {
         validate(request);
 
-        switch (request.getChannel()) {
-            case EMAIL -> emailNotificationService.send(request);
-            case SLACK -> slackNotificationService.send(request);
+        if (Objects.requireNonNull(request.getChannel()) == NotificationChannel.EMAIL) {
+            emailNotificationService.send(request);
         }
     }
 

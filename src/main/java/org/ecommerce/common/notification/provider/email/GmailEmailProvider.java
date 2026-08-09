@@ -24,7 +24,7 @@ public class GmailEmailProvider implements EmailProvider {
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
-            log.info("Email provider send operation completed successfully");
+            log.info("Email provider send operation completed successfully: recipient={}", recipient);
         } catch (MessagingException exception) {
             log.error("Email provider failed while preparing email message", exception);
             throw new IllegalStateException("Failed to send email notification", exception);
