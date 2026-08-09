@@ -5,15 +5,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.Dtos.request.RegisterUserRequestDto;
 import org.ecommerce.auth.Dtos.request.VerifyEmailRequestDto;
 import org.ecommerce.auth.Dtos.response.RegisterUserResponseDto;
+import org.ecommerce.auth.Dtos.response.TokenResponseDto;
 import org.ecommerce.auth.entities.OtpVerification;
+import org.ecommerce.auth.entities.RefreshToken;
 import org.ecommerce.auth.entities.User;
 import org.ecommerce.auth.enums.AccountStatus;
 import org.ecommerce.auth.enums.OtpPurpose;
 import org.ecommerce.auth.enums.OtpStatus;
 import org.ecommerce.auth.repository.OtpVerificationRepository;
+import org.ecommerce.auth.repository.RefreshTokenRepository;
 import org.ecommerce.auth.repository.UserRepository;
+import org.ecommerce.auth.security.JwtService;
 import org.ecommerce.auth.utils.PasswordUtils;
 import org.ecommerce.auth.utils.TokenUtils;
+import org.ecommerce.common.config.properties.JwtProperties;
 import org.ecommerce.common.constants.AppConstants;
 import org.ecommerce.common.exception.ResourceAlreadyExistsException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
@@ -23,12 +28,12 @@ import org.ecommerce.common.notification.enums.channel.NotificationEvent;
 import org.ecommerce.common.notification.service.NotificationService;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -38,8 +43,10 @@ public class AuthService {
     private final OtpVerificationRepository otpVerificationRepository;
     private final PasswordUtils passwordUtils;
     private final NotificationService notificationService;
+    private final JwtService jwtService;
+    private final JwtProperties jwtProperties;
+    private final RefreshTokenRepository refreshTokenRepository;
 
-    @Transactional
     public RegisterUserResponseDto registerUser(RegisterUserRequestDto requestDto) {
         // check user is existed or not
         if (userRepository.findByEmail(requestDto.getEmail()).isPresent()) {
@@ -96,8 +103,7 @@ public class AuthService {
                 .build();
     }
 
-    @Transactional
-    public void verifyEmail(VerifyEmailRequestDto verifyEmailRequest) {
+    public TokenResponseDto verifyEmail(VerifyEmailRequestDto verifyEmailRequest) {
         // check user is existed or not
         User user = userRepository.findById(verifyEmailRequest.getUserId()).orElseThrow(() -> {
             log.warn("User not found for email verification, userId={}", verifyEmailRequest.getUserId());
@@ -118,20 +124,41 @@ public class AuthService {
 
         if (Instant.now().isAfter(otpVerification.getExpiresAt())) {
             otpVerification.setStatus(OtpStatus.EXPIRED);
-            otpVerificationRepository.save(otpVerification);
 
+            otpVerificationRepository.save(otpVerification);
             throw new BadCredentialsException("OTP has expired");
         }
 
         if (!verifyEmailRequest.getOtp().equals(otpVerification.getOtpCode())) {
             otpVerification.setAttemptCount(otpVerification.getAttemptCount() + 1);
+            otpVerificationRepository.save(otpVerification);
+
+            log.warn("Invalid OTP attempt for userId={}, attemptCount={}", user.getId(),
+                    otpVerification.getAttemptCount());
+
             throw new BadCredentialsException("Invalid OTP");
         }
+        // update the OTP
         otpVerification.setStatus(OtpStatus.VERIFIED);
         otpVerification.setVerifiedAt(Instant.now());
-
+        // Set User as Active
         user.setEmailVerified(true);
         user.setAccountStatus(AccountStatus.ACTIVE);
+
+        // Generate Token
+        String accessToken = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user, UUID.randomUUID().toString());
+        log.info("Access and refresh tokens generated successfully for userId={}", user.getId());
+
+        RefreshToken refreshTokenEntity = RefreshToken.builder()
+                .userId(user.getId())
+                .refreshToken(refreshToken)
+                .expiresAt(Instant.now().plusSeconds(jwtProperties.getRefreshTokenExpiration()))
+                .build();
+
+        refreshTokenRepository.save(refreshTokenEntity);
+
+        return new TokenResponseDto(accessToken, refreshToken);
     }
 
     // Notifications Functions

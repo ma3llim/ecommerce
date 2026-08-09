@@ -1,12 +1,16 @@
 package org.ecommerce.auth.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.Dtos.request.RegisterUserRequestDto;
 import org.ecommerce.auth.Dtos.request.VerifyEmailRequestDto;
 import org.ecommerce.auth.Dtos.response.RegisterUserResponseDto;
+import org.ecommerce.auth.Dtos.response.TokenResponseDto;
 import org.ecommerce.auth.service.AuthService;
+import org.ecommerce.auth.utils.CookieUtils;
 import org.ecommerce.common.response.ApiSuccessResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,11 +19,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+    private final CookieUtils cookieUtils;
 
     @PostMapping("/register")
     public ResponseEntity<ApiSuccessResponse<RegisterUserResponseDto>> registerUser(
@@ -38,7 +44,23 @@ public class AuthController {
     }
 
     @PostMapping("/verify-email")
-    public void verifyEmail(@Valid @RequestBody VerifyEmailRequestDto verifyEmailRequest) {
-        authService.verifyEmail(verifyEmailRequest);
+    public ResponseEntity<?> verifyEmail(@Valid @RequestBody VerifyEmailRequestDto verifyEmailRequest,
+                                         HttpServletResponse response,
+                                         HttpServletRequest request) {
+        TokenResponseDto tokens = authService.verifyEmail(verifyEmailRequest);
+
+        cookieUtils.setAuthCookies(response, tokens.accessToken(), tokens.refreshToken());
+
+        log.info("Email verification successful, authentication cookies set for userId={}",
+                verifyEmailRequest.getUserId());
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiSuccessResponse.builder()
+                        .success(true)
+                        .message("Email verified successfully. You are now logged in.")
+                        .path(request.getRequestURI())
+                        .build()
+                );
     }
 }

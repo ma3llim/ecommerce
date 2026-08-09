@@ -9,6 +9,7 @@ import org.ecommerce.common.response.FieldErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -91,6 +92,21 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = ApiErrorResponse.builder()
                 .success(false)
                 .message("Authentication failed")
+                .errorCode("AUTHENTICATION_FAILED")
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    // 401 - BadCredentialsException
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthenticationException(BadCredentialsException exception,
+                                                                          HttpServletRequest request) {
+
+        ApiErrorResponse response = ApiErrorResponse.builder()
+                .success(false)
+                .message(exception.getMessage())
                 .errorCode("AUTHENTICATION_FAILED")
                 .path(request.getRequestURI())
                 .build();

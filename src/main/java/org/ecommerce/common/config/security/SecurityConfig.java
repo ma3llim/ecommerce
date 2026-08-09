@@ -35,7 +35,8 @@ public class SecurityConfig {
                         requestMatcherRegistry.requestMatchers(
                                         SecurityConstants.AUTH_REGISTER,
                                         SecurityConstants.AUTH_LOGIN,
-                                        SecurityConstants.AUTH_REFRESH_TOKEN
+                                        SecurityConstants.AUTH_REFRESH_TOKEN,
+                                        SecurityConstants.AUTH_VERIFY_EMAIL
                                 ).permitAll()
                                 .anyRequest().authenticated()
                 )
