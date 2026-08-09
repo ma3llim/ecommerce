@@ -7,8 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.Dtos.request.RegisterUserRequestDto;
 import org.ecommerce.auth.Dtos.request.VerifyEmailRequestDto;
-import org.ecommerce.auth.Dtos.response.RegisterUserResponseDto;
-import org.ecommerce.auth.Dtos.response.TokenResponseDto;
+import org.ecommerce.auth.Dtos.response.UserAndTokenResponseDto;
+import org.ecommerce.auth.Dtos.response.UserResponseDto;
 import org.ecommerce.auth.service.AuthService;
 import org.ecommerce.auth.utils.CookieUtils;
 import org.ecommerce.common.response.ApiSuccessResponse;
@@ -28,16 +28,16 @@ public class AuthController {
     private final CookieUtils cookieUtils;
 
     @PostMapping("/register")
-    public ResponseEntity<ApiSuccessResponse<RegisterUserResponseDto>> registerUser(
+    public ResponseEntity<ApiSuccessResponse<UserResponseDto>> registerUser(
             @Valid @RequestBody RegisterUserRequestDto requestDto, HttpServletRequest request) {
-        RegisterUserResponseDto registerUserResponseDto = authService.registerUser(requestDto);
+        UserResponseDto userResponseDto = authService.registerUser(requestDto);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiSuccessResponse.<RegisterUserResponseDto>builder()
+                .body(ApiSuccessResponse.<UserResponseDto>builder()
                         .success(true)
                         .message("User registered successfully. We have sent an OTP to your email for verification.")
-                        .data(registerUserResponseDto)
+                        .data(userResponseDto)
                         .path(request.getRequestURI())
                         .build()
                 );
@@ -47,9 +47,9 @@ public class AuthController {
     public ResponseEntity<?> verifyEmail(@Valid @RequestBody VerifyEmailRequestDto verifyEmailRequest,
                                          HttpServletResponse response,
                                          HttpServletRequest request) {
-        TokenResponseDto tokens = authService.verifyEmail(verifyEmailRequest);
+        UserAndTokenResponseDto userAndTokens = authService.verifyEmail(verifyEmailRequest);
 
-        cookieUtils.setAuthCookies(response, tokens.accessToken(), tokens.refreshToken());
+        cookieUtils.setAuthCookies(response, userAndTokens.accessToken(), userAndTokens.refreshToken());
 
         log.info("Email verification successful, authentication cookies set for userId={}",
                 verifyEmailRequest.getUserId());
@@ -59,6 +59,7 @@ public class AuthController {
                 .body(ApiSuccessResponse.builder()
                         .success(true)
                         .message("Email verified successfully. You are now logged in.")
+                        .data(userAndTokens.userResponseDto())
                         .path(request.getRequestURI())
                         .build()
                 );

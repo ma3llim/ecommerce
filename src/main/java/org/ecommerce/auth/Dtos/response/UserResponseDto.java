@@ -9,7 +9,7 @@ import java.util.UUID;
 
 @Getter
 @Builder
-public class RegisterUserResponseDto {
+public class UserResponseDto {
     private UUID userId;
     private String firstName;
     private String lastName;

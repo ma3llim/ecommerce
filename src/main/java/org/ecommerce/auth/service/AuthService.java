@@ -4,8 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.Dtos.request.RegisterUserRequestDto;
 import org.ecommerce.auth.Dtos.request.VerifyEmailRequestDto;
-import org.ecommerce.auth.Dtos.response.RegisterUserResponseDto;
-import org.ecommerce.auth.Dtos.response.TokenResponseDto;
+import org.ecommerce.auth.Dtos.response.UserAndTokenResponseDto;
+import org.ecommerce.auth.Dtos.response.UserResponseDto;
 import org.ecommerce.auth.entities.OtpVerification;
 import org.ecommerce.auth.entities.RefreshToken;
 import org.ecommerce.auth.entities.User;
@@ -47,7 +47,7 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final RefreshTokenRepository refreshTokenRepository;
 
-    public RegisterUserResponseDto registerUser(RegisterUserRequestDto requestDto) {
+    public UserResponseDto registerUser(RegisterUserRequestDto requestDto) {
         // check user is existed or not
         if (userRepository.findByEmail(requestDto.getEmail()).isPresent()) {
             log.warn("User registration rejected: email already exists");
@@ -92,7 +92,7 @@ public class AuthService {
         // Last Log
         log.info("User registration completed successfully: userId={}", user.getId());
 
-        return RegisterUserResponseDto.builder()
+        return UserResponseDto.builder()
                 .userId(user.getId())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
@@ -103,7 +103,7 @@ public class AuthService {
                 .build();
     }
 
-    public TokenResponseDto verifyEmail(VerifyEmailRequestDto verifyEmailRequest) {
+    public UserAndTokenResponseDto verifyEmail(VerifyEmailRequestDto verifyEmailRequest) {
         // check user is existed or not
         User user = userRepository.findById(verifyEmailRequest.getUserId()).orElseThrow(() -> {
             log.warn("User not found for email verification, userId={}", verifyEmailRequest.getUserId());
@@ -157,8 +157,17 @@ public class AuthService {
                 .build();
 
         refreshTokenRepository.save(refreshTokenEntity);
+        UserResponseDto userResponseDto = UserResponseDto.builder()
+                .userId(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .emailVerified(user.isEmailVerified())
+                .accountStatus(user.getAccountStatus())
+                .role(user.getRole())
+                .build();
 
-        return new TokenResponseDto(accessToken, refreshToken);
+        return new UserAndTokenResponseDto(accessToken, refreshToken, userResponseDto);
     }
 
     // Notifications Functions
