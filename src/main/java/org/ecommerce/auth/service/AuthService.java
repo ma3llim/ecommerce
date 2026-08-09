@@ -184,7 +184,7 @@ public class AuthService {
         }
         // updating user last time
         user.setLastLoginAt(Instant.now());
-        
+
         UUID tokenId = UUID.randomUUID();
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user, tokenId.toString());
@@ -267,6 +267,29 @@ public class AuthService {
         UserResponseDto userResponseDto = objectMapper.convertValue(user, UserResponseDto.class);
 
         return new UserAndTokenResponseDto(newAccessToken, newRefreshToken, userResponseDto);
+    }
+
+    public void logout(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new UnauthorizedException("Refresh token is required");
+        }
+
+        if (!jwtService.validateRefreshToken(refreshToken)) {
+            log.warn("Invalid refresh token received");
+            throw new UnauthorizedException("Invalid refresh token");
+        }
+        Claims refreshTokenClaims = jwtService.extractClaims(refreshToken);
+
+        // Token ID
+        UUID tokenId = UUID.fromString(jwtService.getJwtId(refreshTokenClaims));
+        UUID userId = jwtService.getUserId(refreshTokenClaims);
+
+        RefreshToken tokenEntity = refreshTokenRepository.findById(tokenId).orElseThrow(() -> {
+            log.warn("Refresh token not found, tokenId={}, userId={}", tokenId, userId);
+            return new UnauthorizedException("Invalid refresh token");
+        });
+        tokenEntity.setRevoked(true);
+        refreshTokenRepository.save(tokenEntity);
     }
 
     // Notifications Functions

@@ -106,4 +106,24 @@ public class AuthController {
                         .build()
                 );
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiSuccessResponse<Void>> logout(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        String refreshToken = cookieUtils.getRefreshToken(request);
+        authService.logout(refreshToken);
+
+        cookieUtils.clearAuthCookies(response);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<Void>builder()
+                        .success(true)
+                        .message("Logout successful")
+                        .path(request.getRequestURI())
+                        .build()
+        );
+    }
+
 }
