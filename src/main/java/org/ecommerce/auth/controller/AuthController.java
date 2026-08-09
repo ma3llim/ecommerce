@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ecommerce.auth.Dtos.request.LoginRequestDto;
 import org.ecommerce.auth.Dtos.request.RegisterUserRequestDto;
 import org.ecommerce.auth.Dtos.request.VerifyEmailRequestDto;
 import org.ecommerce.auth.Dtos.response.UserAndTokenResponseDto;
@@ -44,22 +45,42 @@ public class AuthController {
     }
 
     @PostMapping("/verify-email")
-    public ResponseEntity<?> verifyEmail(@Valid @RequestBody VerifyEmailRequestDto verifyEmailRequest,
-                                         HttpServletResponse response,
-                                         HttpServletRequest request) {
+    public ResponseEntity<ApiSuccessResponse<UserResponseDto>> verifyEmail(
+            @Valid @RequestBody VerifyEmailRequestDto verifyEmailRequest,
+            HttpServletResponse response,
+            HttpServletRequest request
+    ) {
         UserAndTokenResponseDto userAndTokens = authService.verifyEmail(verifyEmailRequest);
-
         cookieUtils.setAuthCookies(response, userAndTokens.accessToken(), userAndTokens.refreshToken());
 
-        log.info("Email verification successful, authentication cookies set for userId={}",
-                verifyEmailRequest.getUserId());
+        log.info("Email verification successful, authentication cookies set for userId={}", verifyEmailRequest.getUserId());
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiSuccessResponse.builder()
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiSuccessResponse.<UserResponseDto>builder()
                         .success(true)
                         .message("Email verified successfully. You are now logged in.")
                         .data(userAndTokens.userResponseDto())
+                        .path(request.getRequestURI())
+                        .build()
+                );
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiSuccessResponse<UserResponseDto>> login(
+            @Valid @RequestBody LoginRequestDto loginData,
+            HttpServletResponse response,
+            HttpServletRequest request
+    ) {
+        UserAndTokenResponseDto userAndToken = authService.login(loginData);
+
+        cookieUtils.setAuthCookies(response, userAndToken.accessToken(), userAndToken.refreshToken());
+        log.info("Login successful, authentication cookies set for userId={}", userAndToken.userResponseDto().getUserId());
+
+        return ResponseEntity.ok()
+                .body(ApiSuccessResponse.<UserResponseDto>builder()
+                        .success(true)
+                        .message("Login successful")
+                        .data(userAndToken.userResponseDto())
                         .path(request.getRequestURI())
                         .build()
                 );

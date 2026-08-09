@@ -1,7 +1,9 @@
 package org.ecommerce.auth.service;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ecommerce.auth.Dtos.request.LoginRequestDto;
 import org.ecommerce.auth.Dtos.request.RegisterUserRequestDto;
 import org.ecommerce.auth.Dtos.request.VerifyEmailRequestDto;
 import org.ecommerce.auth.Dtos.response.UserAndTokenResponseDto;
@@ -157,6 +159,51 @@ public class AuthService {
                 .build();
 
         refreshTokenRepository.save(refreshTokenEntity);
+        UserResponseDto userResponseDto = UserResponseDto.builder()
+                .userId(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .emailVerified(user.isEmailVerified())
+                .accountStatus(user.getAccountStatus())
+                .role(user.getRole())
+                .build();
+
+        return new UserAndTokenResponseDto(accessToken, refreshToken, userResponseDto);
+    }
+
+    public UserAndTokenResponseDto login(@Valid LoginRequestDto loginData) {
+        // check user is existed or not
+        User user = userRepository.findByEmail(loginData.getEmail()).orElseThrow(() -> {
+            log.warn("User not found for login, email={}", loginData.getEmail());
+            return new ResourceNotFoundException("User not found");
+        });
+        if (!user.isEmailVerified()) {
+            log.warn("Login attempt with unverified email={}", loginData.getEmail());
+            throw new BadCredentialsException("Email is not verified");
+        }
+        if (user.getAccountStatus() != AccountStatus.ACTIVE) {
+            log.warn("Login attempt with inactive account, email={}", loginData.getEmail());
+            throw new BadCredentialsException("Account is not active");
+        }
+
+        if (!passwordUtils.passwordMatches(loginData.getPassword(), user.getPassword())) {
+            log.warn("Login attempt with incorrect password, email={}", loginData.getEmail());
+            throw new BadCredentialsException("Invalid password");
+        }
+
+        String accessToken = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user, UUID.randomUUID().toString());
+        log.info("Access and refresh tokens generated successfully for userId={}", user.getId());
+
+        RefreshToken refreshTokenEntity = RefreshToken.builder()
+                .userId(user.getId())
+                .refreshToken(refreshToken)
+                .expiresAt(Instant.now().plusSeconds(jwtProperties.getRefreshTokenExpiration()))
+                .build();
+
+        refreshTokenRepository.save(refreshTokenEntity);
+
         UserResponseDto userResponseDto = UserResponseDto.builder()
                 .userId(user.getId())
                 .firstName(user.getFirstName())
