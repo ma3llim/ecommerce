@@ -1,5 +1,7 @@
 package org.ecommerce.auth.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -24,10 +26,18 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Tag(
+        name = "Authentication",
+        description = "APIs for user registration, authentication, email verification, password management, and logout"
+)
 public class AuthController {
     private final AuthService authService;
     private final CookieUtils cookieUtils;
 
+    @Operation(
+            summary = "Register a new user",
+            description = "Creates a new user account and sends an OTP to the user's email for verification"
+    )
     @PostMapping("/register")
     public ResponseEntity<ApiSuccessResponse<UserResponseDto>> registerUser(@Valid @RequestBody RegisterUserRequestDto requestDto, HttpServletRequest request) {
         UserResponseDto userResponseDto = authService.registerUser(requestDto);
@@ -37,6 +47,10 @@ public class AuthController {
         );
     }
 
+    @Operation(
+            summary = "Verify user email",
+            description = "Verifies the user's email using the OTP and establishes authentication cookies"
+    )
     @PostMapping("/verify-email")
     public ResponseEntity<ApiSuccessResponse<UserResponseDto>> verifyEmail(@Valid @RequestBody VerifyEmailRequestDto verifyEmailRequest, HttpServletResponse response, HttpServletRequest request) {
         UserAndTokenResponseDto userAndTokens = authService.verifyEmail(verifyEmailRequest);
@@ -49,12 +63,20 @@ public class AuthController {
         );
     }
 
+    @Operation(
+            summary = "Resend verification OTP",
+            description = "Sends a new email verification OTP to the user"
+    )
     @PostMapping("/resend-verification")
     public ResponseEntity<ApiSuccessResponse<Void>> resendVerification(@Valid @RequestBody ResendVerificationRequestDto requestDto, HttpServletRequest request) {
         authService.resendVerification(requestDto.userId());
         return ResponseEntity.ok(ApiSuccessResponse.<Void>builder().success(true).message("Verification OTP resent successfully").data(null).path(request.getRequestURI()).build());
     }
 
+    @Operation(
+            summary = "Authenticate user",
+            description = "Authenticates the user using email and password and establishes authentication cookies"
+    )
     @PostMapping("/login")
     public ResponseEntity<ApiSuccessResponse<UserResponseDto>> login(@Valid @RequestBody LoginRequestDto loginData, HttpServletResponse response, HttpServletRequest request) {
         UserAndTokenResponseDto userAndToken = authService.login(loginData);
@@ -65,6 +87,10 @@ public class AuthController {
         return ResponseEntity.ok().body(ApiSuccessResponse.<UserResponseDto>builder().success(true).message("Login successful").data(userAndToken.userResponseDto()).path(request.getRequestURI()).build());
     }
 
+    @Operation(
+            summary = "Refresh authentication tokens",
+            description = "Generates new access and refresh tokens using the refresh token stored in the authentication cookie"
+    )
     @PostMapping("/refresh-token")
     public ResponseEntity<ApiSuccessResponse<UserResponseDto>> refreshToken(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = cookieUtils.getRefreshToken(request);
@@ -77,6 +103,10 @@ public class AuthController {
                 .path(request.getRequestURI()).build());
     }
 
+    @Operation(
+            summary = "Logout user",
+            description = "Invalidates the refresh token and clears authentication cookies"
+    )
     @PostMapping("/logout")
     public ResponseEntity<ApiSuccessResponse<Void>> logout(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = cookieUtils.getRefreshToken(request);
@@ -87,12 +117,20 @@ public class AuthController {
         return ResponseEntity.ok(ApiSuccessResponse.<Void>builder().success(true).message("Logout successful").path(request.getRequestURI()).build());
     }
 
+    @Operation(
+            summary = "Request password reset",
+            description = "Sends a password reset OTP to the user's registered email address"
+    )
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiSuccessResponse<UUID>> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDto requestDto, HttpServletRequest request, HttpServletResponse response) {
         UUID userId = authService.forgotPassword(requestDto.email());
         return ResponseEntity.ok(ApiSuccessResponse.<UUID>builder().success(true).message("Password reset OTP sent successfully").data(userId).path(request.getRequestURI()).build());
     }
 
+    @Operation(
+            summary = "Reset user password",
+            description = "Resets the user's password using the password reset OTP and clears existing authentication cookies"
+    )
     @PostMapping("/reset-password")
     public ResponseEntity<ApiSuccessResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequestDto resetPasswordDto, HttpServletRequest request, HttpServletResponse response) {
         authService.resetPassword(resetPasswordDto);
