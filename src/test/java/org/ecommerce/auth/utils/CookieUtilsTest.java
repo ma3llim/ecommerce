@@ -52,7 +52,6 @@ public class CookieUtilsTest {
         assertEquals(refreshToken, refreshCookie.getValue());
     }
 
-    //should + expected behavior + when + condition
     @Test
     @DisplayName("Should clear both authentication cookies")
     void clearAuthCookies_shouldClearBothCookies() {
