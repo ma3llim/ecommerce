@@ -53,7 +53,7 @@ public class AuthController {
         UserAndTokenResponseDto userAndTokens = authService.verifyEmail(verifyEmailRequest);
         cookieUtils.setAuthCookies(response, userAndTokens.accessToken(), userAndTokens.refreshToken());
 
-        log.info("Email verification successful, authentication cookies set for userId={}", verifyEmailRequest.getUserId());
+        log.info("Email verification successful, authentication cookies set for userId={}", verifyEmailRequest.userId());
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiSuccessResponse.<UserResponseDto>builder()
@@ -89,7 +89,7 @@ public class AuthController {
         UserAndTokenResponseDto userAndToken = authService.login(loginData);
 
         cookieUtils.setAuthCookies(response, userAndToken.accessToken(), userAndToken.refreshToken());
-        log.info("Login successful, authentication cookies set for userId={}", userAndToken.userResponseDto().getId());
+        log.info("Login successful, authentication cookies set for userId={}", userAndToken.userResponseDto().id());
 
         return ResponseEntity.ok()
                 .body(ApiSuccessResponse.<UserResponseDto>builder()
@@ -110,7 +110,7 @@ public class AuthController {
         UserAndTokenResponseDto userAndTokenResponseDto = authService.refreshToken(refreshToken);
         cookieUtils.setAuthCookies(response, userAndTokenResponseDto.accessToken(), userAndTokenResponseDto.refreshToken());
 
-        log.info("Authentication tokens refreshed successfully, cookies updated for userId={}", userAndTokenResponseDto.userResponseDto().getId());
+        log.info("Authentication tokens refreshed successfully, cookies updated for userId={}", userAndTokenResponseDto.userResponseDto().id());
 
         return ResponseEntity.ok()
                 .body(ApiSuccessResponse.<UserResponseDto>builder()

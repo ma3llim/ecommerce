@@ -58,18 +58,18 @@ public class AuthService {
 
     public UserResponseDto registerUser(RegisterUserRequestDto requestDto) {
         // check user is existed or not
-        if (userRepository.findByEmail(requestDto.getEmail()).isPresent()) {
+        if (userRepository.findByEmail(requestDto.email()).isPresent()) {
             log.warn("User registration rejected: email already exists");
             throw new ResourceAlreadyExistsException("Email already exists");
         }
 
         // encode the password
-        String hashPassword = passwordUtils.encode(requestDto.getPassword());
+        String hashPassword = passwordUtils.encode(requestDto.password());
         // save user
         User user = User.builder()
-                .firstName(requestDto.getFirstName())
-                .lastName(requestDto.getLastName())
-                .email(requestDto.getEmail())
+                .firstName(requestDto.firstName())
+                .lastName(requestDto.lastName())
+                .email(requestDto.email())
                 .password(hashPassword)
                 .build();
 
@@ -105,8 +105,8 @@ public class AuthService {
 
     public UserAndTokenResponseDto verifyEmail(VerifyEmailRequestDto verifyEmailRequest) {
         // check user is existed or not
-        User user = userRepository.findById(verifyEmailRequest.getUserId()).orElseThrow(() -> {
-            log.warn("User not found for email verification, userId={}", verifyEmailRequest.getUserId());
+        User user = userRepository.findById(verifyEmailRequest.userId()).orElseThrow(() -> {
+            log.warn("User not found for email verification, userId={}", verifyEmailRequest.userId());
             return new ResourceNotFoundException("User not found");
         });
 
@@ -129,7 +129,7 @@ public class AuthService {
             throw new BadCredentialsException("OTP has expired");
         }
 
-        if (!verifyEmailRequest.getOtp().equals(otpVerification.getOtpCode())) {
+        if (!verifyEmailRequest.otp().equals(otpVerification.getOtpCode())) {
             otpVerification.setAttemptCount(otpVerification.getAttemptCount() + 1);
             otpVerificationRepository.save(otpVerification);
 
@@ -208,21 +208,21 @@ public class AuthService {
 
     public UserAndTokenResponseDto login(@Valid LoginRequestDto loginData) {
         // check user is existed or not
-        User user = userRepository.findByEmail(loginData.getEmail()).orElseThrow(() -> {
-            log.warn("User not found for login, email={}", loginData.getEmail());
+        User user = userRepository.findByEmail(loginData.email()).orElseThrow(() -> {
+            log.warn("User not found for login, email={}", loginData.email());
             return new ResourceNotFoundException("User not found");
         });
         if (!user.isEmailVerified()) {
-            log.warn("Login attempt with unverified email={}", loginData.getEmail());
+            log.warn("Login attempt with unverified email={}", loginData.email());
             throw new BadCredentialsException("Email is not verified");
         }
         if (user.getAccountStatus() != AccountStatus.ACTIVE) {
-            log.warn("Login attempt with inactive account, email={}", loginData.getEmail());
+            log.warn("Login attempt with inactive account, email={}", loginData.email());
             throw new BadCredentialsException("Account is not active");
         }
 
-        if (!passwordUtils.passwordMatches(loginData.getPassword(), user.getPassword())) {
-            log.warn("Login attempt with incorrect password, email={}", loginData.getEmail());
+        if (!passwordUtils.passwordMatches(loginData.password(), user.getPassword())) {
+            log.warn("Login attempt with incorrect password, email={}", loginData.email());
             throw new BadCredentialsException("Invalid password");
         }
         // updating user last time
