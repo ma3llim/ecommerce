@@ -5,10 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ecommerce.auth.Dtos.request.LoginRequestDto;
-import org.ecommerce.auth.Dtos.request.RegisterUserRequestDto;
-import org.ecommerce.auth.Dtos.request.ResendVerificationRequestDto;
-import org.ecommerce.auth.Dtos.request.VerifyEmailRequestDto;
+import org.ecommerce.auth.Dtos.request.*;
 import org.ecommerce.auth.Dtos.response.UserAndTokenResponseDto;
 import org.ecommerce.auth.Dtos.response.UserResponseDto;
 import org.ecommerce.auth.service.AuthService;
@@ -20,6 +17,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -142,4 +141,37 @@ public class AuthController {
         );
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiSuccessResponse<UUID>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequestDto requestDto,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        UUID userId = authService.forgotPassword(requestDto.email());
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<UUID>builder()
+                        .success(true)
+                        .message("Password reset OTP sent successfully")
+                        .data(userId)
+                        .path(request.getRequestURI())
+                        .build()
+        );
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiSuccessResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequestDto resetPasswordDto,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        authService.resetPassword(resetPasswordDto);
+        cookieUtils.clearAuthCookies(response);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<Void>builder()
+                        .success(true)
+                        .message("Password reset successfully")
+                        .path(request.getRequestURI()).build()
+        );
+    }
 }

@@ -11,6 +11,10 @@ public enum EmailTemplate {
     OTP_VERIFICATION(
             "email/otp-verification",
             "Verify Your Email Address"
+    ),
+    FORGET_PASSWORD_VERIFICATION(
+            "email/forget-password-verification",
+            "Reset Your Password"
     );
     private final String templatePath;
     private final String subject;

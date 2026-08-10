@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.Dtos.request.LoginRequestDto;
 import org.ecommerce.auth.Dtos.request.RegisterUserRequestDto;
+import org.ecommerce.auth.Dtos.request.ResetPasswordRequestDto;
 import org.ecommerce.auth.Dtos.request.VerifyEmailRequestDto;
 import org.ecommerce.auth.Dtos.response.UserAndTokenResponseDto;
 import org.ecommerce.auth.Dtos.response.UserResponseDto;
@@ -334,6 +335,78 @@ public class AuthService {
         refreshTokenRepository.save(tokenEntity);
     }
 
+    public UUID forgotPassword(String email) {
+        // check user is existed or not
+        User user = userRepository.findByEmail(email).orElseThrow(() -> {
+            log.warn("User not found for password reset, email={}", email);
+            return new ResourceNotFoundException("User not found");
+        });
+        // Generate reset OTP
+        String forgotOtp = TokenUtils.generateOtp();
+
+
+        OtpVerification forgotOtpVerification = OtpVerification.builder()
+                .userId(user.getId())
+                .purpose(OtpPurpose.PASSWORD_RESET)
+                .otpCode(forgotOtp)
+                .expiresAt(Instant.now().plus(AppConstants.OTP_TOKEN_EXPIRY_MINUTES, ChronoUnit.MINUTES))
+                .status(OtpStatus.PENDING)
+                .build();
+        otpVerificationRepository.save(forgotOtpVerification);
+
+        log.info("Password reset OTP generated and saved successfully, userId={}, purpose={}", user.getId(), OtpPurpose.PASSWORD_RESET);
+
+        sendForgotOtpMail(user.getFullName(), forgotOtp, String.valueOf(AppConstants.OTP_TOKEN_EXPIRY_MINUTES), user.getEmail());
+        log.info("Password reset OTP email sent successfully, userId={}", user.getId());
+
+        return user.getId();
+    }
+
+    @Transactional(noRollbackFor = BadCredentialsException.class)
+    public void resetPassword(ResetPasswordRequestDto resetPasswordDto) {
+        // check user is existed or not
+        User user = userRepository.findById(resetPasswordDto.userId()).orElseThrow(() -> {
+            log.warn("User not found during password reset OTP verification, userId={}", resetPasswordDto.userId());
+            return new BadCredentialsException("Invalid OTP");
+        });
+
+        OtpVerification otpVerification = otpVerificationRepository.findByUserIdAndPurposeAndStatus(
+                user.getId(),
+                OtpPurpose.PASSWORD_RESET,
+                OtpStatus.PENDING
+        ).orElseThrow(() -> {
+            log.warn("Pending password reset OTP not found, userId={}", user.getId());
+            return new BadCredentialsException("Invalid OTP");
+        });
+
+        if (otpVerification.getAttemptCount() >= AppConstants.MAX_OTP_ATTEMPTS) {
+            log.warn("Maximum password reset OTP attempts exceeded, userId={}", user.getId());
+            throw new BadCredentialsException("Maximum OTP attempts exceeded");
+        }
+        if (Instant.now().isAfter(otpVerification.getExpiresAt())) {
+            otpVerification.setStatus(OtpStatus.EXPIRED);
+
+            otpVerificationRepository.save(otpVerification);
+            throw new BadCredentialsException("OTP has expired");
+        }
+
+        if (!otpVerification.getOtpCode().equals(resetPasswordDto.otp())) {
+            otpVerification.setAttemptCount(otpVerification.getAttemptCount() + 1);
+            log.warn("Invalid OTP attempt for reset password userId={}, attemptCount={}", user.getId(), otpVerification.getAttemptCount());
+            throw new BadCredentialsException("Invalid OTP");
+        }
+
+        // hash password and update in user table
+        String hashPassword = passwordUtils.encode(resetPasswordDto.password());
+        user.setPassword(hashPassword);
+        user.setPasswordChangedAt(Instant.now());
+        // update token table
+        otpVerification.setStatus(OtpStatus.VERIFIED);
+
+        refreshTokenRepository.findAllByUserId(user.getId())
+                .forEach(refreshToken -> refreshToken.setRevoked(true));
+    }
+
     // Notifications Functions
     // Send OTP to user
     private void sendOtpMail(String fullName, String otp, String expiryMinutes, String recipientEmail) {
@@ -352,4 +425,20 @@ public class AuthService {
         notificationService.send(request);
     }
 
+    // forgot OTP
+    private void sendForgotOtpMail(String fullName, String otp, String expiryMinutes, String recipientEmail) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("fullName", fullName);
+        data.put("otp", otp);
+        data.put("expiryMinutes", expiryMinutes);
+
+        NotificationRequest request = NotificationRequest.builder()
+                .channel(NotificationChannel.EMAIL)
+                .event(NotificationEvent.FORGET_PASSWORD_VERIFICATION)
+                .recipient(recipientEmail)
+                .data(data)
+                .build();
+
+        notificationService.send(request);
+    }
 }

@@ -33,6 +33,7 @@ public class EmailNotificationService {
         return switch (event) {
             case USER_REGISTERED -> EmailTemplate.REGISTRATION_WELCOME;
             case OTP_VERIFICATION -> EmailTemplate.OTP_VERIFICATION;
+            case FORGET_PASSWORD_VERIFICATION -> EmailTemplate.FORGET_PASSWORD_VERIFICATION;
 
             default -> throw new IllegalArgumentException(
                     "Unsupported email notification event: " + event
