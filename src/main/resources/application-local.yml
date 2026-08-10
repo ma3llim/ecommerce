@@ -56,7 +56,6 @@ springdoc:
     enabled: true
     operations-sorter: method
     tags-sorter: alpha
-    defaultModelsExpandDepth: -1
 
   packages-to-scan:
     - org.ecommerce
