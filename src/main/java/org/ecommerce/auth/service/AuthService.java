@@ -409,7 +409,7 @@ public class AuthService {
 
     // Notifications Functions
     // Send OTP to user
-    private void sendOtpMail(String fullName, String otp, String expiryMinutes, String recipientEmail) {
+    void sendOtpMail(String fullName, String otp, String expiryMinutes, String recipientEmail) {
         Map<String, Object> data = new HashMap<>();
         data.put("fullName", fullName);
         data.put("otp", otp);
@@ -426,7 +426,7 @@ public class AuthService {
     }
 
     // forgot OTP
-    private void sendForgotOtpMail(String fullName, String otp, String expiryMinutes, String recipientEmail) {
+    void sendForgotOtpMail(String fullName, String otp, String expiryMinutes, String recipientEmail) {
         Map<String, Object> data = new HashMap<>();
         data.put("fullName", fullName);
         data.put("otp", otp);
