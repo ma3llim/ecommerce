@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.Dtos.request.LoginRequestDto;
 import org.ecommerce.auth.Dtos.request.RegisterUserRequestDto;
+import org.ecommerce.auth.Dtos.request.ResendVerificationRequestDto;
 import org.ecommerce.auth.Dtos.request.VerifyEmailRequestDto;
 import org.ecommerce.auth.Dtos.response.UserAndTokenResponseDto;
 import org.ecommerce.auth.Dtos.response.UserResponseDto;
@@ -63,6 +64,21 @@ public class AuthController {
                         .path(request.getRequestURI())
                         .build()
                 );
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<ApiSuccessResponse<Void>> resendVerification(
+            @Valid @RequestBody ResendVerificationRequestDto requestDto,
+            HttpServletRequest request) {
+        authService.resendVerification(requestDto.userId());
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<Void>builder()
+                        .success(true)
+                        .message("Verification OTP resent successfully")
+                        .data(null)
+                        .path(request.getRequestURI())
+                        .build()
+        );
     }
 
     @PostMapping("/login")

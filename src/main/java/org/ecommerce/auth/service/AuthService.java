@@ -24,6 +24,7 @@ import org.ecommerce.auth.utils.PasswordUtils;
 import org.ecommerce.auth.utils.TokenUtils;
 import org.ecommerce.common.config.properties.JwtProperties;
 import org.ecommerce.common.constants.AppConstants;
+import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ResourceAlreadyExistsException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
 import org.ecommerce.common.exception.UnauthorizedException;
@@ -161,6 +162,47 @@ public class AuthService {
         UserResponseDto userResponseDto = objectMapper.convertValue(user, UserResponseDto.class);
 
         return new UserAndTokenResponseDto(accessToken, refreshToken, userResponseDto);
+    }
+
+    public void resendVerification(UUID userId) {
+        // check user is existed or not
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("User not found for resend email verification, userId={}", userId);
+            return new ResourceNotFoundException("User not found");
+        });
+
+        if (user.isEmailVerified()) {
+            log.warn("Email already verified, userId={}", userId);
+            throw new BadRequestException("Email is already verified");
+        }
+
+        otpVerificationRepository.findByUserIdAndPurposeAndStatus(userId, OtpPurpose.EMAIL_VERIFICATION,
+                OtpStatus.PENDING).ifPresent(currentOpt -> {
+            currentOpt.setStatus(OtpStatus.EXPIRED);
+            otpVerificationRepository.save(currentOpt);
+        });
+
+        // generate new otp and send mail
+        // Generate Otp and Verification Code
+        String otp = TokenUtils.generateOtp();
+
+        // save otp
+        OtpVerification otpVerification = OtpVerification.builder()
+                .purpose(OtpPurpose.EMAIL_VERIFICATION)
+                .userId(user.getId())
+                .otpCode(otp)
+                .expiresAt(Instant.now().plus(AppConstants.OTP_TOKEN_EXPIRY_MINUTES, ChronoUnit.MINUTES))
+                .status(OtpStatus.PENDING)
+                .build();
+
+        otpVerificationRepository.save(otpVerification);
+
+        log.info("Email verification OTP generated and saved successfully, userId={}, purpose={}", user.getId(),
+                OtpPurpose.EMAIL_VERIFICATION);
+
+        // send mail
+        sendOtpMail(user.getFullName(), otp, String.valueOf(AppConstants.OTP_TOKEN_EXPIRY_MINUTES), user.getEmail());
+        log.info("Email verification OTP resent successfully, userId={}", user.getId());
     }
 
     public UserAndTokenResponseDto login(@Valid LoginRequestDto loginData) {
@@ -309,4 +351,5 @@ public class AuthService {
 
         notificationService.send(request);
     }
+
 }

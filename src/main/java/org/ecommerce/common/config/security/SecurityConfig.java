@@ -37,7 +37,10 @@ public class SecurityConfig {
                                         SecurityConstants.AUTH_REGISTER,
                                         SecurityConstants.AUTH_LOGIN,
                                         SecurityConstants.AUTH_REFRESH_TOKEN,
-                                        SecurityConstants.AUTH_VERIFY_EMAIL
+                                        SecurityConstants.AUTH_VERIFY_EMAIL,
+                                        SecurityConstants.AUTH_FORGET_PASSWORD,
+                                        SecurityConstants.AUTH_RESEND_VERIFICATION,
+                                        SecurityConstants.AUTH_RESET_PASSWORD
                                 ).permitAll()
                                 .anyRequest().authenticated()
                 )
