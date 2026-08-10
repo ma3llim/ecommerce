@@ -40,7 +40,10 @@ public class SecurityConfig {
                                         SecurityConstants.AUTH_VERIFY_EMAIL,
                                         SecurityConstants.AUTH_FORGET_PASSWORD,
                                         SecurityConstants.AUTH_RESEND_VERIFICATION,
-                                        SecurityConstants.AUTH_RESET_PASSWORD
+                                        SecurityConstants.AUTH_RESET_PASSWORD,
+                                        SecurityConstants.SWAGGER_UI,
+                                        SecurityConstants.SWAGGER_UI_RESOURCES,
+                                        SecurityConstants.OPEN_API_DOCS
                                 ).permitAll()
                                 .anyRequest().authenticated()
                 )

@@ -45,3 +45,18 @@ app:
     http-only: true
     same-site: ${COOKIE_SAME_SITE}
     path: /
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    defaultModelsExpandDepth: -1
+
+  packages-to-scan:
+    - org.ecommerce
