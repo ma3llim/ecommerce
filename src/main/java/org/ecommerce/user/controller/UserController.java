@@ -48,6 +48,10 @@ public class UserController {
                 .build());
     }
 
+    @Operation(
+            summary = "Update logged-in user's profile",
+            description = "Updates the profile information of the currently authenticated user."
+    )
     @PatchMapping("/me")
     public ResponseEntity<ApiSuccessResponse<UserInfoResponseDto>> updateUserInfo(
             @Valid @RequestBody UserRequestDto updateUserInDto,
@@ -63,6 +67,10 @@ public class UserController {
                 .build());
     }
 
+    @Operation(
+            summary = "Update user's password",
+            description = "Updates the password of the currently authenticated user and clears the authentication cookies."
+    )
     @PatchMapping("/me/password")
     public ResponseEntity<ApiSuccessResponse<Void>> updatePassword(
             @Valid @RequestBody PasswordRequestDto passwordRequestDto,
@@ -79,6 +87,10 @@ public class UserController {
                 .build());
     }
 
+    @Operation(
+            summary = "Update profile image",
+            description = "Uploads or replaces the profile image of the currently authenticated user."
+    )
     @PatchMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiSuccessResponse<UserInfoResponseDto>> updateProfileImage(
             @ValidImage @RequestPart("profileImage") MultipartFile profileImage, Authentication authentication,
