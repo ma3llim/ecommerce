@@ -8,14 +8,17 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.common.response.ApiSuccessResponse;
 import org.ecommerce.common.utils.CookieUtils;
+import org.ecommerce.common.validator.ValidImage.ValidImage;
 import org.ecommerce.user.dtos.request.PasswordRequestDto;
 import org.ecommerce.user.dtos.request.UserRequestDto;
 import org.ecommerce.user.dtos.response.UserInfoResponseDto;
 import org.ecommerce.user.service.UserService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -72,6 +75,21 @@ public class UserController {
                 .success(true)
                 .message("Password Updated successfully, login to continue")
                 .data(null)
+                .path(request.getRequestURI())
+                .build());
+    }
+
+    @PatchMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiSuccessResponse<UserInfoResponseDto>> updateProfileImage(
+            @ValidImage @RequestPart("profileImage") MultipartFile profileImage, Authentication authentication,
+            HttpServletRequest request
+    ) {
+        UserInfoResponseDto userInfoResponseDto = userService.updateProfileImage(profileImage, authentication);
+
+        return ResponseEntity.ok(ApiSuccessResponse.<UserInfoResponseDto>builder()
+                .success(true)
+                .message("Profile Image update successfully")
+                .data(userInfoResponseDto)
                 .path(request.getRequestURI())
                 .build());
     }

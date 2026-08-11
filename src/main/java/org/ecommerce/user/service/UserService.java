@@ -7,14 +7,18 @@ import org.ecommerce.auth.entities.User;
 import org.ecommerce.auth.repository.RefreshTokenRepository;
 import org.ecommerce.auth.repository.UserRepository;
 import org.ecommerce.auth.utils.PasswordUtils;
+import org.ecommerce.common.dtos.CloudinaryUploadResult;
+import org.ecommerce.common.enums.CloudinaryFolder;
 import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ResourceAlreadyExistsException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
+import org.ecommerce.common.service.CloudinaryService;
 import org.ecommerce.user.dtos.request.PasswordRequestDto;
 import org.ecommerce.user.dtos.request.UserRequestDto;
 import org.ecommerce.user.dtos.response.UserInfoResponseDto;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -27,6 +31,7 @@ public class UserService {
     private final ObjectMapper objectMapper;
     private final PasswordUtils passwordUtils;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final CloudinaryService cloudinaryService;
 
     public UserInfoResponseDto getUserInfo(Authentication authentication) {
         User userPrincipal = (User) authentication.getPrincipal();
@@ -85,5 +90,26 @@ public class UserService {
         refreshTokenRepository.findAllByUserId(userId).forEach(token -> {
             token.setRevoked(true);
         });
+    }
+
+    public UserInfoResponseDto updateProfileImage(MultipartFile profileImage, Authentication authentication) {
+        UUID userId = ((User) authentication.getPrincipal()).getId();
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("User not found for update profile image, userId={}", userId);
+            return new ResourceNotFoundException("User not found");
+        });
+        String oldProfilePublicId = user.getProfileImagePublicId();
+        CloudinaryUploadResult cloudinaryUploadResult = cloudinaryService.uploadImage(profileImage, CloudinaryFolder.PROFILE_IMAGES);
+
+        user.setProfileImageUrl(cloudinaryUploadResult.secureUrl());
+        user.setProfileImagePublicId(cloudinaryUploadResult.publicId());
+
+        userRepository.save(user);
+        
+        if (oldProfilePublicId != null && !oldProfilePublicId.isBlank()) {
+            cloudinaryService.removeImage(oldProfilePublicId);
+        }
+
+        return objectMapper.convertValue(user, UserInfoResponseDto.class);
     }
 }

@@ -45,7 +45,8 @@ public class User {
 
     private Instant passwordChangedAt;
     private String profileImageUrl;
-
+    private String profileImagePublicId;
+    
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

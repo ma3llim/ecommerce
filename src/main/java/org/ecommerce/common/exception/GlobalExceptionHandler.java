@@ -14,6 +14,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 import javax.naming.AuthenticationException;
 import java.nio.file.AccessDeniedException;
@@ -184,5 +185,21 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+
+    // Image Exception
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnexpectedException(HandlerMethodValidationException exception, HttpServletRequest request) {
+
+        log.error("Unhandled exception: method={}, path={}", request.getMethod(), request.getRequestURI(), exception);
+
+        ApiErrorResponse response = ApiErrorResponse.builder()
+                .success(false)
+                .message("Validation failed")
+                .errorCode("VALIDATION_ERROR")
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 }
