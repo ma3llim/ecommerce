@@ -4,14 +4,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.entities.User;
+import org.ecommerce.auth.repository.RefreshTokenRepository;
 import org.ecommerce.auth.repository.UserRepository;
+import org.ecommerce.auth.utils.PasswordUtils;
+import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ResourceAlreadyExistsException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
+import org.ecommerce.user.dtos.request.PasswordRequestDto;
 import org.ecommerce.user.dtos.request.UserRequestDto;
 import org.ecommerce.user.dtos.response.UserInfoResponseDto;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Slf4j
@@ -20,14 +25,18 @@ import java.util.UUID;
 public class UserService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final PasswordUtils passwordUtils;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     public UserInfoResponseDto getUserInfo(Authentication authentication) {
         User userPrincipal = (User) authentication.getPrincipal();
         UUID userId = userPrincipal.getId();
+
         User user = userRepository.findById(userId).orElseThrow(() -> {
             log.warn("User not found for User Info, userId={}", userId);
             return new ResourceNotFoundException("User not found");
         });
+
         return objectMapper.convertValue(user, UserInfoResponseDto.class);
     }
 
@@ -51,6 +60,30 @@ public class UserService {
         userRepository.save(user);
 
         return objectMapper.convertValue(user, UserInfoResponseDto.class);
+    }
 
+
+    public void updatePassword(PasswordRequestDto passwordRequestDto, Authentication authentication) {
+        UUID userId = ((User) authentication.getPrincipal()).getId();
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("User not found for update user password, userId={}", userId);
+            return new ResourceNotFoundException("User not found");
+        });
+
+        if (!passwordUtils.passwordMatches(passwordRequestDto.currentPassword(), user.getPassword())) {
+            throw new BadRequestException("User current password not match");
+        }
+
+        String hashPassword = passwordUtils.encode(passwordRequestDto.password());
+
+        user.setPassword(hashPassword);
+        user.setPasswordChangedAt(Instant.now());
+
+        userRepository.save(user);
+
+        // Deactivate tokens
+        refreshTokenRepository.findAllByUserId(userId).forEach(token -> {
+            token.setRevoked(true);
+        });
     }
 }
