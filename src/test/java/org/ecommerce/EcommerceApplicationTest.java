@@ -3,5 +3,8 @@
  */
 package org.ecommerce;
 
-public class EcommerceApplicationTest {
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class EcommerceApplicationTest {
 }

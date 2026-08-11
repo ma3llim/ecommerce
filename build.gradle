@@ -27,10 +27,14 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     // Validation
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    // model mapper
-    implementation 'org.modelmapper:modelmapper:3.2.6'
     // spring security
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    // Spring Mail
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    // Thymeleaf
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    // model mapper
+    implementation 'org.modelmapper:modelmapper:3.2.6'
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
@@ -40,17 +44,17 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.7'
     // Postgresql
     runtimeOnly 'org.postgresql:postgresql'
+    // Swagger
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
 
     // Testing
-    // Use JUnit test framework.
-    testImplementation libs.junit
-    // This dependency is used by the application.
-    implementation libs.guava
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     // Lombok for tests
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
+    // Database H2 for
+    testRuntimeOnly 'com.h2database:h2'
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -63,4 +67,8 @@ java {
 application {
     // Define the main class for the application.
     mainClass = 'org.ecommerce.EcommerceAplication'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }
