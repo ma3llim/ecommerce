@@ -42,7 +42,7 @@ public class UserController {
 
         return ResponseEntity.ok(ApiSuccessResponse.<UserInfoResponseDto>builder()
                 .success(true)
-                .message("Successfully retrieved user information")
+                .message("User information retrieved successfully")
                 .data(userInfoResponseDto)
                 .path(request.getRequestURI())
                 .build());
@@ -57,7 +57,7 @@ public class UserController {
 
         return ResponseEntity.ok(ApiSuccessResponse.<UserInfoResponseDto>builder()
                 .success(true)
-                .message("User info update successfully")
+                .message("User information updated successfully")
                 .data(userInfoResponseDto)
                 .path(request.getRequestURI())
                 .build());
@@ -73,7 +73,7 @@ public class UserController {
         cookieUtils.clearAuthCookies(response);
         return ResponseEntity.ok(ApiSuccessResponse.<Void>builder()
                 .success(true)
-                .message("Password Updated successfully, login to continue")
+                .message("Password updated successfully. Please log in again to continue.")
                 .data(null)
                 .path(request.getRequestURI())
                 .build());
@@ -88,7 +88,7 @@ public class UserController {
 
         return ResponseEntity.ok(ApiSuccessResponse.<UserInfoResponseDto>builder()
                 .success(true)
-                .message("Profile Image update successfully")
+                .message("Profile image updated successfully")
                 .data(userInfoResponseDto)
                 .path(request.getRequestURI())
                 .build());
