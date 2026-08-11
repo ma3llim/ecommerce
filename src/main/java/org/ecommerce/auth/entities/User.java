@@ -3,6 +3,7 @@ package org.ecommerce.auth.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import org.ecommerce.auth.enums.AccountStatus;
+import org.ecommerce.auth.enums.AuthProvider;
 import org.ecommerce.auth.enums.Role;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -54,6 +55,11 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.USER;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AuthProvider provider = AuthProvider.LOCAL;
 
     private Instant lastLoginAt;
 

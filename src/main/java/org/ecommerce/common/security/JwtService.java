@@ -1,4 +1,4 @@
-package org.ecommerce.auth.security;
+package org.ecommerce.common.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;

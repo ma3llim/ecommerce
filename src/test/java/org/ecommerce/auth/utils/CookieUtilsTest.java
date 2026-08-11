@@ -3,6 +3,7 @@ package org.ecommerce.auth.utils;
 import jakarta.servlet.http.Cookie;
 import org.ecommerce.common.config.properties.CookieProperties;
 import org.ecommerce.common.config.properties.JwtProperties;
+import org.ecommerce.common.utils.CookieUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

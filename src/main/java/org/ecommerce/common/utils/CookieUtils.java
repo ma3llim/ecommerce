@@ -1,4 +1,4 @@
-package org.ecommerce.auth.utils;
+package org.ecommerce.common.utils;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
