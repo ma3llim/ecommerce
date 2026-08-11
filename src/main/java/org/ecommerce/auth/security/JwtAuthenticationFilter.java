@@ -38,6 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // No JWT -> continue as anonymous request
         if (header == null || !header.startsWith("Bearer ")) {
+            log.debug("No Bearer token found for request {}", request.getRequestURI());
             filterChain.doFilter(request, response);
             return;
         }
@@ -48,6 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Claims claims = jwtService.extractClaims(accessToken);
 
             if (!jwtService.isAccessToken(claims)) {
+                log.debug("JWT rejected because token is not an access token for request {}", request.getRequestURI());
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -56,6 +58,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             User user = userRepository.findById(userId).orElse(null);
             if (user == null) {
+                log.warn("JWT authentication failed: user not found for userId={} and request={}", userId, request.getRequestURI());
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -69,6 +72,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         new UsernamePasswordAuthenticationToken(user, null, authorities);
 
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                log.debug("JWT authentication successful for userId={}, role={}, request={}", userId, user.getRole(), request.getRequestURI());
             }
         } catch (Exception e) {
             log.debug(
