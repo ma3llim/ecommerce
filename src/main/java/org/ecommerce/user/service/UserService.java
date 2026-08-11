@@ -34,21 +34,23 @@ public class UserService {
     private final CloudinaryService cloudinaryService;
 
     public UserInfoResponseDto getUserInfo(Authentication authentication) {
-        User userPrincipal = (User) authentication.getPrincipal();
-        UUID userId = userPrincipal.getId();
+        UUID userId = ((User) authentication.getPrincipal()).getId();
 
         User user = userRepository.findById(userId).orElseThrow(() -> {
-            log.warn("User not found for User Info, userId={}", userId);
+            log.info("User information request failed: user not found, userId={}", userId);
             return new ResourceNotFoundException("User not found");
         });
+
+        log.info("User information retrieved successfully: userId={}", userId);
 
         return objectMapper.convertValue(user, UserInfoResponseDto.class);
     }
 
     public UserInfoResponseDto updateUserInfo(UserRequestDto updateUserInDto, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
+
         User user = userRepository.findById(userId).orElseThrow(() -> {
-            log.warn("User not found for update user info, userId={}", userId);
+            log.warn("User information update failed: user not found, userId={}", userId);
             return new ResourceNotFoundException("User not found");
         });
 
@@ -56,13 +58,18 @@ public class UserService {
         if (updateUserInDto.lastName() != null) user.setLastName(updateUserInDto.lastName().trim());
         if (updateUserInDto.phoneNumber() != null) {
             String phoneNumber = updateUserInDto.phoneNumber().trim();
-            if (!phoneNumber.equalsIgnoreCase(user.getPhoneNumber()) && userRepository.existsByPhoneNumberIgnoreCaseAndIdNot(phoneNumber, userId)) {
-                throw new ResourceAlreadyExistsException("Phone Number is already register");
+
+            if (!phoneNumber.equalsIgnoreCase(user.getPhoneNumber())
+                    && userRepository.existsByPhoneNumberIgnoreCaseAndIdNot(phoneNumber, userId)) {
+                log.warn("User information update rejected: phone number already registered, userId={}", userId);
+                throw new ResourceAlreadyExistsException("Phone number is already registered");
             }
             user.setPhoneNumber(phoneNumber);
         }
 
         userRepository.save(user);
+
+        log.info("User information updated successfully: userId={}", userId);
 
         return objectMapper.convertValue(user, UserInfoResponseDto.class);
     }
@@ -71,12 +78,13 @@ public class UserService {
     public void updatePassword(PasswordRequestDto passwordRequestDto, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
         User user = userRepository.findById(userId).orElseThrow(() -> {
-            log.warn("User not found for update user password, userId={}", userId);
+            log.warn("Password update failed: user not found, userId={}", userId);
             return new ResourceNotFoundException("User not found");
         });
 
         if (!passwordUtils.passwordMatches(passwordRequestDto.currentPassword(), user.getPassword())) {
-            throw new BadRequestException("User current password not match");
+            log.warn("Password update rejected: current password is incorrect, userId={}", userId);
+            throw new BadRequestException("Current password is incorrect");
         }
 
         String hashPassword = passwordUtils.encode(passwordRequestDto.password());
@@ -90,12 +98,14 @@ public class UserService {
         refreshTokenRepository.findAllByUserId(userId).forEach(token -> {
             token.setRevoked(true);
         });
+
+        log.info("Password updated successfully and refresh tokens revoked: userId={}", userId);
     }
 
     public UserInfoResponseDto updateProfileImage(MultipartFile profileImage, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
         User user = userRepository.findById(userId).orElseThrow(() -> {
-            log.warn("User not found for update profile image, userId={}", userId);
+            log.warn("Profile image update failed: user not found, userId={}", userId);
             return new ResourceNotFoundException("User not found");
         });
         String oldProfilePublicId = user.getProfileImagePublicId();
@@ -105,11 +115,12 @@ public class UserService {
         user.setProfileImagePublicId(cloudinaryUploadResult.publicId());
 
         userRepository.save(user);
-        
+        log.info("Profile image information updated successfully: userId={}", userId);
+
         if (oldProfilePublicId != null && !oldProfilePublicId.isBlank()) {
             cloudinaryService.removeImage(oldProfilePublicId);
         }
-
+        log.info("Profile image update completed successfully: userId={}", userId);
         return objectMapper.convertValue(user, UserInfoResponseDto.class);
     }
 }
