@@ -41,7 +41,7 @@ public class UserService {
         if (updateUserInDto.firstName() != null) user.setFirstName(updateUserInDto.firstName().trim());
         if (updateUserInDto.lastName() != null) user.setLastName(updateUserInDto.lastName().trim());
         if (updateUserInDto.phoneNumber() != null) {
-            String phoneNumber = updateUserInDto.phoneNumber();
+            String phoneNumber = updateUserInDto.phoneNumber().trim();
             if (!phoneNumber.equalsIgnoreCase(user.getPhoneNumber()) && userRepository.existsByPhoneNumberIgnoreCaseAndIdNot(phoneNumber, userId)) {
                 throw new ResourceAlreadyExistsException("Phone Number is already register");
             }
