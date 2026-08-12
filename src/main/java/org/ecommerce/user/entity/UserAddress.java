@@ -1,9 +1,7 @@
 package org.ecommerce.user.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.ecommerce.user.enums.AddressType;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -13,6 +11,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
+@Setter
+@Getter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -31,11 +31,11 @@ public class UserAddress {
     private String state;
     private String country;
     private String postalCode;
-    
+
     @Enumerated(EnumType.STRING)
     private AddressType addressType;
-    private boolean isDefaultShipping;
-    private boolean isDefaultBilling;
+    private boolean defaultShipping;
+    private boolean defaultBilling;
     @CreatedDate
     private Instant createdAt;
     @LastModifiedDate

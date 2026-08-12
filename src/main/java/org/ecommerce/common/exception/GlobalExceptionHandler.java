@@ -1,6 +1,7 @@
 package org.ecommerce.common.exception;
 
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -51,9 +52,16 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException exception,
             HttpServletRequest request
     ) {
+        String message = "Invalid request body";
+        if (exception.getCause() instanceof InvalidFormatException invalidFormatException) {
+            String fieldName = invalidFormatException.getPath().getFirst().getFieldName();
+            Object invalidValue = invalidFormatException.getValue();
+            message = String.format("Invalid value '%s' for field '%s'", invalidValue, fieldName);
+        }
+
         ApiErrorResponse response = ApiErrorResponse.builder()
                 .success(false)
-                .message("Invalid request body")
+                .message(message)
                 .errorCode("INVALID_REQUEST_BODY")
                 .path(request.getRequestURI())
                 .build();

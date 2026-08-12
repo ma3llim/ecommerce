@@ -7,11 +7,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.entities.User;
 import org.ecommerce.auth.repository.UserRepository;
 import org.ecommerce.common.exception.ResourceNotFoundException;
+import org.ecommerce.user.dtos.request.AddNewAddressDto;
 import org.ecommerce.user.dtos.response.AddressResponseDto;
 import org.ecommerce.user.entity.UserAddress;
 import org.ecommerce.user.repository.UserAddressRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -36,5 +38,64 @@ public class UserAddressService {
 
         return objectMapper.convertValue(userAddresses, new TypeReference<List<AddressResponseDto>>() {
         });
+    }
+
+    @Transactional
+    public AddressResponseDto addNewAddress(AddNewAddressDto addNewAddress, Authentication authentication) {
+        UUID userId = ((User) authentication.getPrincipal()).getId();
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.info("User add new Address request failed: user not found, userId={}", userId);
+            return new ResourceNotFoundException("User not found");
+        });
+
+        boolean isFirstAddress = !userAddressRepository.existsByUserId(user.getId());
+        boolean defaultShipping;
+        boolean defaultBilling;
+
+        if (isFirstAddress) {
+            defaultShipping = true;
+            defaultBilling = true;
+        } else {
+            defaultShipping = addNewAddress.defaultShipping();
+            defaultBilling = addNewAddress.defaultBilling();
+
+            if (defaultShipping) {
+                userAddressRepository.removeDefaultShipping(userId);
+            }
+
+            if (defaultBilling) {
+                userAddressRepository.removeDefaultBilling(userId);
+            }
+        }
+
+        UserAddress newUserAddress = UserAddress.builder()
+                .userId(userId)
+                .fullName(addNewAddress.fullName())
+                .phoneNumber(addNewAddress.phoneNumber())
+                .addressLineOne(addNewAddress.addressLineOne())
+                .addressLineTwo(addNewAddress.addressLineTwo())
+                .city(addNewAddress.city())
+                .state(addNewAddress.state())
+                .country(addNewAddress.country())
+                .postalCode(addNewAddress.postalCode())
+                .addressType(addNewAddress.addressType())
+                .defaultShipping(defaultShipping)
+                .defaultBilling(defaultBilling)
+                .build();
+
+        log.info(
+                "Before save: shipping={}, billing={}",
+                newUserAddress.isDefaultShipping(),
+                newUserAddress.isDefaultBilling()
+        );
+        UserAddress savedNewAddress = userAddressRepository.save(newUserAddress);
+
+        log.info(
+                "After save: shipping={}, billing={}",
+                newUserAddress.isDefaultShipping(),
+                newUserAddress.isDefaultBilling()
+        );
+
+        return objectMapper.convertValue(savedNewAddress, AddressResponseDto.class);
     }
 }

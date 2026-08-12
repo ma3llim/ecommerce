@@ -5,6 +5,7 @@ import org.ecommerce.user.enums.AddressType;
 import java.time.Instant;
 
 public record AddressResponseDto(
+        String id,
         String fullName,
         String phoneNumber,
         String addressLineOne,
@@ -14,8 +15,8 @@ public record AddressResponseDto(
         String country,
         String postalCode,
         AddressType addressType,
-        boolean isDefaultShipping,
-        boolean isDefaultBilling,
+        boolean defaultShipping,
+        boolean defaultBilling,
         Instant createdAt,
         Instant updatedAt
 ) {
