@@ -1,6 +1,7 @@
 package org.ecommerce.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -77,6 +78,7 @@ public class AuthController {
             summary = "Authenticate user",
             description = "Authenticates the user using email and password and establishes authentication cookies"
     )
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/login")
     public ResponseEntity<ApiSuccessResponse<UserResponseDto>> login(@Valid @RequestBody LoginRequestDto loginData, HttpServletResponse response, HttpServletRequest request) {
         UserAndTokenResponseDto userAndToken = authService.login(loginData);
@@ -107,6 +109,7 @@ public class AuthController {
             summary = "Logout user",
             description = "Invalidates the refresh token and clears authentication cookies"
     )
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/logout")
     public ResponseEntity<ApiSuccessResponse<Void>> logout(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = cookieUtils.getRefreshToken(request);
