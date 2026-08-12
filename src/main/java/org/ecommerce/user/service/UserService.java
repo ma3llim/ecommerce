@@ -118,7 +118,12 @@ public class UserService {
         log.info("Profile image information updated successfully: userId={}", userId);
 
         if (oldProfilePublicId != null && !oldProfilePublicId.isBlank()) {
-            cloudinaryService.removeImage(oldProfilePublicId);
+            boolean removed = cloudinaryService.removeImage(oldProfilePublicId);
+            if (removed) {
+                log.info("Old profile image removed successfully: userId={}, publicId={}", userId, oldProfilePublicId);
+            } else {
+                log.warn("Failed to remove old profile image: userId={}, publicId={}", userId, oldProfilePublicId);
+            }
         }
         log.info("Profile image update completed successfully: userId={}", userId);
         return objectMapper.convertValue(user, UserInfoResponseDto.class);
