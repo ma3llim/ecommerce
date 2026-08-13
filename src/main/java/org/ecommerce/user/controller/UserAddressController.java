@@ -7,7 +7,6 @@ import org.ecommerce.common.response.ApiSuccessResponse;
 import org.ecommerce.user.dtos.request.AddNewAddressDto;
 import org.ecommerce.user.dtos.request.UpdateAddressDto;
 import org.ecommerce.user.dtos.response.AddressResponseDto;
-import org.ecommerce.user.repository.UserAddressRepository;
 import org.ecommerce.user.service.UserAddressService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -21,7 +20,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserAddressController {
     private final UserAddressService userAddressService;
-    private final UserAddressRepository userAddressRepository;
 
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<List<AddressResponseDto>>> getAllUserAddresses(
@@ -66,6 +64,23 @@ public class UserAddressController {
                         .success(true)
                         .message("Address updated successfully")
                         .data(addressResponseDto)
+                        .path(request.getRequestURI())
+                        .build()
+        );
+    }
+
+    @DeleteMapping("/{addressId}")
+    public ResponseEntity<ApiSuccessResponse<Void>> deleteAddress(
+            @PathVariable UUID addressId, Authentication authentication,
+            HttpServletRequest request
+    ) {
+        String message = userAddressService.deleteAddress(addressId, authentication);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<Void>builder()
+                        .success(true)
+                        .message(message)
+                        .data(null)
                         .path(request.getRequestURI())
                         .build()
         );

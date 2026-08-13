@@ -142,32 +142,34 @@ public class UserAddressService {
 
         return objectMapper.convertValue(existingAddress, AddressResponseDto.class);
     }
+
+    public String deleteAddress(UUID addressId, Authentication authentication) {
+        String message;
+        UUID userId = ((User) authentication.getPrincipal()).getId();
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.info("Delete address request failed: user not found, userId={}, addressId={}", userId, addressId);
+            return new ResourceNotFoundException("User not found");
+        });
+
+        UserAddress existingAddress = userAddressRepository.findById(addressId).orElseThrow(() -> {
+            log.info("delete address request failed: address not found, userId={}, addressId={}", userId, addressId);
+            return new ResourceNotFoundException("Address not found");
+        });
+
+        if (!existingAddress.getUserId().equals(user.getId())) {
+            log.warn("delete address request rejected: address does not belong to user, userId={}, addressId={}", userId, addressId);
+            throw new ResourceNotFoundException("Address not found");
+        }
+        if (existingAddress.isDefaultShipping()) {
+            message = "remember shipping default was deleted";
+        } else if (existingAddress.isDefaultBilling()) {
+            message = "remember billing default was deleted";
+        } else {
+            message = "Address Delete SuccessFully";
+        }
+
+        userAddressRepository.delete(existingAddress);
+
+        return message;
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
