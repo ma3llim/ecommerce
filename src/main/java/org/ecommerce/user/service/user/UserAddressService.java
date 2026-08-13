@@ -1,4 +1,4 @@
-package org.ecommerce.user.service;
+package org.ecommerce.user.service.user;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

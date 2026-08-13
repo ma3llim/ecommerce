@@ -10,7 +10,7 @@ import org.ecommerce.common.response.ApiSuccessResponse;
 import org.ecommerce.user.dtos.user.request.AddNewAddressDto;
 import org.ecommerce.user.dtos.user.request.UpdateAddressDto;
 import org.ecommerce.user.dtos.user.response.AddressResponseDto;
-import org.ecommerce.user.service.UserAddressService;
+import org.ecommerce.user.service.user.UserAddressService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;

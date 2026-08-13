@@ -13,7 +13,7 @@ import org.ecommerce.common.validator.ValidImage.ValidImage;
 import org.ecommerce.user.dtos.user.request.PasswordRequestDto;
 import org.ecommerce.user.dtos.user.request.UserRequestDto;
 import org.ecommerce.user.dtos.user.response.UserInfoResponseDto;
-import org.ecommerce.user.service.UserService;
+import org.ecommerce.user.service.user.UserService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
