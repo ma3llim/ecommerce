@@ -10,6 +10,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
 
   mail:
     host: smtp.gmail.com
@@ -45,6 +49,11 @@ app:
     http-only: true
     same-site: ${COOKIE_SAME_SITE}
     path: /
+
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME}
+    api-key: ${CLOUDINARY_API_KEY}
+    api-secret: ${CLOUDINARY_API_SECRET}
 
 springdoc:
   api-docs:

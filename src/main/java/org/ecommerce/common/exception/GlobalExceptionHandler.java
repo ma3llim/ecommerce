@@ -1,6 +1,7 @@
 package org.ecommerce.common.exception;
 
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -10,10 +11,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 import javax.naming.AuthenticationException;
 import java.nio.file.AccessDeniedException;
@@ -50,9 +53,16 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException exception,
             HttpServletRequest request
     ) {
+        String message = "Invalid request body";
+        if (exception.getCause() instanceof InvalidFormatException invalidFormatException) {
+            String fieldName = invalidFormatException.getPath().getFirst().getFieldName();
+            Object invalidValue = invalidFormatException.getValue();
+            message = String.format("Invalid value '%s' for field '%s'", invalidValue, fieldName);
+        }
+
         ApiErrorResponse response = ApiErrorResponse.builder()
                 .success(false)
-                .message("Invalid request body")
+                .message(message)
                 .errorCode("INVALID_REQUEST_BODY")
                 .path(request.getRequestURI())
                 .build();
@@ -97,6 +107,20 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthorizationDeniedExceptionException(AuthorizationDeniedException exception,
+                                                                                        HttpServletRequest request) {
+
+        ApiErrorResponse response = ApiErrorResponse.builder()
+                .success(false)
+                .message("You do not have permission to access this resource")
+                .errorCode("ACCESS_DENIED")
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
     // 401 - BadCredentialsException
@@ -184,5 +208,21 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+
+    // Image Exception
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnexpectedException(HandlerMethodValidationException exception, HttpServletRequest request) {
+
+        log.error("Unhandled exception: method={}, path={}", request.getMethod(), request.getRequestURI(), exception);
+
+        ApiErrorResponse response = ApiErrorResponse.builder()
+                .success(false)
+                .message("Validation failed")
+                .errorCode("VALIDATION_ERROR")
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 }
