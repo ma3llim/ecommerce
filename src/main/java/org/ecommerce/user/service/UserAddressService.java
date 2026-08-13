@@ -52,6 +52,13 @@ public class UserAddressService {
         });
 
         boolean isFirstAddress = !userAddressRepository.existsByUserId(user.getId());
+
+        if (addNewAddress.addressType() != AddressType.OTHER && userAddressRepository.existsByUserIdAndAddressType(user.getId(), addNewAddress.addressType())) {
+            log.warn("Update address request rejected: address type already exists, userId={}, addressType={}", userId, addNewAddress.addressType());
+
+            throw new BadRequestException("An address of type " + addNewAddress.addressType() + " already exists");
+        }
+
         boolean defaultShipping;
         boolean defaultBilling;
 
@@ -69,12 +76,6 @@ public class UserAddressService {
             if (defaultBilling) {
                 userAddressRepository.removeDefaultBilling(userId);
             }
-        }
-
-        if (addNewAddress.addressType() != AddressType.OTHER && userAddressRepository.existsByUserIdAndAddressType(user.getId(), addNewAddress.addressType())) {
-            log.warn("Update address request rejected: address type already exists, userId={}, addressType={}", userId, addNewAddress.addressType());
-
-            throw new BadRequestException("An address of type " + addNewAddress.addressType() + " already exists");
         }
 
         UserAddress newUserAddress = UserAddress.builder()
@@ -97,6 +98,7 @@ public class UserAddressService {
         return objectMapper.convertValue(savedNewAddress, AddressResponseDto.class);
     }
 
+    @Transactional
     public AddressResponseDto updateAddress(UUID addressId, Authentication authentication, UpdateAddressDto updateAddressDto) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
         User user = userRepository.findById(userId).orElseThrow(() -> {
@@ -136,40 +138,49 @@ public class UserAddressService {
             existingAddress.setAddressType(updateAddressDto.addressType());
         }
 
-        userAddressRepository.save(existingAddress);
-
         log.info("Address updated successfully, userId={}, addressId={}", userId, addressId);
 
         return objectMapper.convertValue(existingAddress, AddressResponseDto.class);
     }
 
+    @Transactional
     public String deleteAddress(UUID addressId, Authentication authentication) {
-        String message;
         UUID userId = ((User) authentication.getPrincipal()).getId();
+
         User user = userRepository.findById(userId).orElseThrow(() -> {
             log.info("Delete address request failed: user not found, userId={}, addressId={}", userId, addressId);
             return new ResourceNotFoundException("User not found");
         });
 
         UserAddress existingAddress = userAddressRepository.findById(addressId).orElseThrow(() -> {
-            log.info("delete address request failed: address not found, userId={}, addressId={}", userId, addressId);
+            log.info("Delete address request failed: address not found, userId={}, addressId={}", userId, addressId);
             return new ResourceNotFoundException("Address not found");
         });
 
         if (!existingAddress.getUserId().equals(user.getId())) {
-            log.warn("delete address request rejected: address does not belong to user, userId={}, addressId={}", userId, addressId);
+            log.warn("Delete address request rejected: address does not belong to user, userId={}, addressId={}", userId, addressId);
             throw new ResourceNotFoundException("Address not found");
         }
-        if (existingAddress.isDefaultShipping()) {
-            message = "remember shipping default was deleted";
-        } else if (existingAddress.isDefaultBilling()) {
-            message = "remember billing default was deleted";
-        } else {
-            message = "Address Delete SuccessFully";
-        }
+
+        boolean isDefaultShipping = existingAddress.isDefaultShipping();
+        boolean isDefaultBilling = existingAddress.isDefaultBilling();
 
         userAddressRepository.delete(existingAddress);
 
-        return message;
+        log.info("Address deleted successfully, userId={}, addressId={}, defaultShipping={}, defaultBilling={}", userId, addressId, isDefaultShipping, isDefaultBilling);
+
+        if (isDefaultShipping && isDefaultBilling) {
+            return "Address deleted successfully. It was the default shipping and billing address";
+        }
+
+        if (isDefaultShipping) {
+            return "Address deleted successfully. It was the default shipping address";
+        }
+
+        if (isDefaultBilling) {
+            return "Address deleted successfully. It was the default billing address";
+        }
+
+        return "Address deleted successfully";
     }
 }
