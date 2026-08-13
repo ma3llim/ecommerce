@@ -1,4 +1,4 @@
-package org.ecommerce.user.dtos.request;
+package org.ecommerce.user.dtos.user.request;
 
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;

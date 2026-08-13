@@ -1,4 +1,4 @@
-package org.ecommerce.user.dtos.response;
+package org.ecommerce.user.dtos.user.response;
 
 import org.ecommerce.auth.enums.AccountStatus;
 import org.ecommerce.auth.enums.AuthProvider;

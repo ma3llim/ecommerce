@@ -1,4 +1,4 @@
-package org.ecommerce.user.controller;
+package org.ecommerce.user.controller.user;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -7,9 +7,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.common.response.ApiSuccessResponse;
-import org.ecommerce.user.dtos.request.AddNewAddressDto;
-import org.ecommerce.user.dtos.request.UpdateAddressDto;
-import org.ecommerce.user.dtos.response.AddressResponseDto;
+import org.ecommerce.user.dtos.user.request.AddNewAddressDto;
+import org.ecommerce.user.dtos.user.request.UpdateAddressDto;
+import org.ecommerce.user.dtos.user.response.AddressResponseDto;
 import org.ecommerce.user.service.UserAddressService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

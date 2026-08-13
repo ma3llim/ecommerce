@@ -1,4 +1,4 @@
-package org.ecommerce.user.controller;
+package org.ecommerce.user.controller.user;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -10,9 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.ecommerce.common.response.ApiSuccessResponse;
 import org.ecommerce.common.utils.CookieUtils;
 import org.ecommerce.common.validator.ValidImage.ValidImage;
-import org.ecommerce.user.dtos.request.PasswordRequestDto;
-import org.ecommerce.user.dtos.request.UserRequestDto;
-import org.ecommerce.user.dtos.response.UserInfoResponseDto;
+import org.ecommerce.user.dtos.user.request.PasswordRequestDto;
+import org.ecommerce.user.dtos.user.request.UserRequestDto;
+import org.ecommerce.user.dtos.user.response.UserInfoResponseDto;
 import org.ecommerce.user.service.UserService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

@@ -1,4 +1,4 @@
-package org.ecommerce.user.dtos.response;
+package org.ecommerce.user.dtos.user.response;
 
 import org.ecommerce.user.enums.AddressType;
 
