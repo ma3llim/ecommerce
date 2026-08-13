@@ -1,5 +1,8 @@
 package org.ecommerce.user.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +12,7 @@ import org.ecommerce.user.dtos.request.UpdateAddressDto;
 import org.ecommerce.user.dtos.response.AddressResponseDto;
 import org.ecommerce.user.service.UserAddressService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,9 +22,13 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/users/me/addresses")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('USER')")
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "User Addresses", description = "APIs for managing the authenticated user's addresses")
 public class UserAddressController {
     private final UserAddressService userAddressService;
 
+    @Operation(summary = "Get all user addresses", description = "Retrieves all addresses belonging to the authenticated user.")
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<List<AddressResponseDto>>> getAllUserAddresses(
             Authentication authentication, HttpServletRequest request) {
@@ -37,6 +45,7 @@ public class UserAddressController {
         );
     }
 
+    @Operation(summary = "Add a new address", description = "Adds a new address for the authenticated user.")
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<AddressResponseDto>> addNewAddress(
             @Valid @RequestBody AddNewAddressDto addNewAddress,
@@ -52,6 +61,7 @@ public class UserAddressController {
         );
     }
 
+    @Operation(summary = "Update an address", description = "Updates an existing address belonging to the authenticated user.")
     @PutMapping("/{addressId}")
     public ResponseEntity<ApiSuccessResponse<AddressResponseDto>> updateAddress(
             @PathVariable UUID addressId, Authentication authentication,
@@ -69,6 +79,7 @@ public class UserAddressController {
         );
     }
 
+    @Operation(summary = "Delete an address", description = "Deletes an existing address belonging to the authenticated user.")
     @DeleteMapping("/{addressId}")
     public ResponseEntity<ApiSuccessResponse<Void>> deleteAddress(
             @PathVariable UUID addressId, Authentication authentication,
@@ -86,6 +97,7 @@ public class UserAddressController {
         );
     }
 
+    @Operation(summary = "Set default shipping address", description = "Sets the specified address as the default shipping address for the authenticated user.")
     @PatchMapping("/{addressId}/default-shipping")
     public ResponseEntity<ApiSuccessResponse<Void>> defaultShipping(
             @PathVariable UUID addressId, Authentication authentication, HttpServletRequest request
@@ -102,6 +114,7 @@ public class UserAddressController {
         );
     }
 
+    @Operation(summary = "Set default billing address", description = "Sets the specified address as the default billing address for the authenticated user.")
     @PatchMapping("/{addressId}/default-billing")
     public ResponseEntity<ApiSuccessResponse<Void>> defaultBilling(
             @PathVariable UUID addressId, Authentication authentication, HttpServletRequest request
