@@ -6,10 +6,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.entities.User;
 import org.ecommerce.auth.repository.UserRepository;
+import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
 import org.ecommerce.user.dtos.request.AddNewAddressDto;
+import org.ecommerce.user.dtos.request.UpdateAddressDto;
 import org.ecommerce.user.dtos.response.AddressResponseDto;
 import org.ecommerce.user.entity.UserAddress;
+import org.ecommerce.user.enums.AddressType;
 import org.ecommerce.user.repository.UserAddressRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -68,6 +71,12 @@ public class UserAddressService {
             }
         }
 
+        if (addNewAddress.addressType() != AddressType.OTHER && userAddressRepository.existsByUserIdAndAddressType(user.getId(), addNewAddress.addressType())) {
+            log.warn("Update address request rejected: address type already exists, userId={}, addressType={}", userId, addNewAddress.addressType());
+
+            throw new BadRequestException("An address of type " + addNewAddress.addressType() + " already exists");
+        }
+
         UserAddress newUserAddress = UserAddress.builder()
                 .userId(userId)
                 .fullName(addNewAddress.fullName())
@@ -83,19 +92,82 @@ public class UserAddressService {
                 .defaultBilling(defaultBilling)
                 .build();
 
-        log.info(
-                "Before save: shipping={}, billing={}",
-                newUserAddress.isDefaultShipping(),
-                newUserAddress.isDefaultBilling()
-        );
         UserAddress savedNewAddress = userAddressRepository.save(newUserAddress);
-
-        log.info(
-                "After save: shipping={}, billing={}",
-                newUserAddress.isDefaultShipping(),
-                newUserAddress.isDefaultBilling()
-        );
 
         return objectMapper.convertValue(savedNewAddress, AddressResponseDto.class);
     }
+
+    public AddressResponseDto updateAddress(UUID addressId, Authentication authentication, UpdateAddressDto updateAddressDto) {
+        UUID userId = ((User) authentication.getPrincipal()).getId();
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.info("Update address request failed: user not found, userId={}, addressId={}", userId, addressId);
+            return new ResourceNotFoundException("User not found");
+        });
+
+        UserAddress existingAddress = userAddressRepository.findById(addressId).orElseThrow(() -> {
+            log.info("Update address request failed: address not found, userId={}, addressId={}", userId, addressId);
+            return new ResourceNotFoundException("Address not found");
+        });
+
+        if (!existingAddress.getUserId().equals(user.getId())) {
+            log.warn("Update address request rejected: address does not belong to user, userId={}, addressId={}", userId, addressId);
+            throw new ResourceNotFoundException("Address not found");
+        }
+
+
+        if (updateAddressDto.fullName() != null) existingAddress.setFullName(updateAddressDto.fullName().trim());
+        if (updateAddressDto.phoneNumber() != null)
+            existingAddress.setPhoneNumber(updateAddressDto.phoneNumber().trim());
+        if (updateAddressDto.addressLineOne() != null)
+            existingAddress.setAddressLineOne(updateAddressDto.addressLineOne().trim());
+        if (updateAddressDto.addressLineTwo() != null)
+            existingAddress.setAddressLineTwo(updateAddressDto.addressLineTwo().trim());
+
+        if (updateAddressDto.city() != null) existingAddress.setCity(updateAddressDto.city().trim());
+        if (updateAddressDto.state() != null) existingAddress.setState(updateAddressDto.state().trim());
+        if (updateAddressDto.country() != null) existingAddress.setCountry(updateAddressDto.country().trim());
+        if (updateAddressDto.postalCode() != null) existingAddress.setPostalCode(updateAddressDto.postalCode().trim());
+        if (updateAddressDto.addressType() != null && updateAddressDto.addressType() != existingAddress.getAddressType()) {
+            if (updateAddressDto.addressType() != AddressType.OTHER && userAddressRepository.existsByUserIdAndAddressType(user.getId(), updateAddressDto.addressType())) {
+                log.warn("Update address request rejected: address type already exists, userId={}, addressId={}, addressType={}", userId, addressId, updateAddressDto.addressType());
+
+                throw new BadRequestException("An address of type " + updateAddressDto.addressType() + " already exists");
+            }
+            existingAddress.setAddressType(updateAddressDto.addressType());
+        }
+
+        userAddressRepository.save(existingAddress);
+
+        log.info("Address updated successfully, userId={}, addressId={}", userId, addressId);
+
+        return objectMapper.convertValue(existingAddress, AddressResponseDto.class);
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

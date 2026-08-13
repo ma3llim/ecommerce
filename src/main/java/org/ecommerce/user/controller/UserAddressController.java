@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.common.response.ApiSuccessResponse;
 import org.ecommerce.user.dtos.request.AddNewAddressDto;
+import org.ecommerce.user.dtos.request.UpdateAddressDto;
 import org.ecommerce.user.dtos.response.AddressResponseDto;
 import org.ecommerce.user.repository.UserAddressRepository;
 import org.ecommerce.user.service.UserAddressService;
@@ -13,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/users/me/addresses")
@@ -46,6 +48,23 @@ public class UserAddressController {
                 ApiSuccessResponse.<AddressResponseDto>builder()
                         .success(true)
                         .message("Address added successfully")
+                        .data(addressResponseDto)
+                        .path(request.getRequestURI())
+                        .build()
+        );
+    }
+
+    @PutMapping("/{addressId}")
+    public ResponseEntity<ApiSuccessResponse<AddressResponseDto>> updateAddress(
+            @PathVariable UUID addressId, Authentication authentication,
+            @Valid @RequestBody UpdateAddressDto updateAddressDto, HttpServletRequest request
+    ) {
+        AddressResponseDto addressResponseDto = userAddressService.updateAddress(addressId, authentication, updateAddressDto);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<AddressResponseDto>builder()
+                        .success(true)
+                        .message("Address updated successfully")
                         .data(addressResponseDto)
                         .path(request.getRequestURI())
                         .build()

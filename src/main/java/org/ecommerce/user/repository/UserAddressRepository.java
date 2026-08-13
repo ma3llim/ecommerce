@@ -1,6 +1,7 @@
 package org.ecommerce.user.repository;
 
 import org.ecommerce.user.entity.UserAddress;
+import org.ecommerce.user.enums.AddressType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -30,4 +31,6 @@ public interface UserAddressRepository extends JpaRepository<UserAddress, UUID> 
                 WHERE a.userId = :userId AND a.defaultBilling = true
             """)
     void removeDefaultBilling(@Param("userId") UUID userId);
+
+    boolean existsByUserIdAndAddressType(UUID userId, AddressType addressType);
 }
