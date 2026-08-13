@@ -111,7 +111,7 @@ public class UserAddressController {
         return ResponseEntity.ok(
                 ApiSuccessResponse.<Void>builder()
                         .success(true)
-                        .message("Default Billing address updated successfully")
+                        .message("Default billing address updated successfully")
                         .data(null)
                         .path(request.getRequestURI())
                         .build()

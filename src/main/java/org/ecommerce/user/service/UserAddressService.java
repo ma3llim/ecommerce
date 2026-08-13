@@ -33,7 +33,7 @@ public class UserAddressService {
         UUID userId = ((User) authentication.getPrincipal()).getId();
 
         User user = userRepository.findById(userId).orElseThrow(() -> {
-            log.info("User Address request failed: user not found, userId={}", userId);
+            log.warn("Get all addresses failed: user not found, userId={}", userId);
             return new ResourceNotFoundException("User not found");
         });
 
@@ -47,15 +47,14 @@ public class UserAddressService {
     public AddressResponseDto addNewAddress(AddNewAddressDto addNewAddress, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
         User user = userRepository.findById(userId).orElseThrow(() -> {
-            log.info("User add new Address request failed: user not found, userId={}", userId);
+            log.warn("Add address request failed: user not found, userId={}", userId);
             return new ResourceNotFoundException("User not found");
         });
 
         boolean isFirstAddress = !userAddressRepository.existsByUserId(user.getId());
 
         if (addNewAddress.addressType() != AddressType.OTHER && userAddressRepository.existsByUserIdAndAddressType(user.getId(), addNewAddress.addressType())) {
-            log.warn("Update address request rejected: address type already exists, userId={}, addressType={}", userId, addNewAddress.addressType());
-
+            log.warn("Add address request rejected: address type already exists, userId={}, addressType={}", userId, addNewAddress.addressType());
             throw new BadRequestException("An address of type " + addNewAddress.addressType() + " already exists");
         }
 
@@ -94,7 +93,7 @@ public class UserAddressService {
                 .build();
 
         UserAddress savedNewAddress = userAddressRepository.save(newUserAddress);
-
+        log.info("Address created successfully, userId={}, addressId={}", userId, savedNewAddress.getId());
         return objectMapper.convertValue(savedNewAddress, AddressResponseDto.class);
     }
 
@@ -102,12 +101,12 @@ public class UserAddressService {
     public AddressResponseDto updateAddress(UUID addressId, Authentication authentication, UpdateAddressDto updateAddressDto) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
         User user = userRepository.findById(userId).orElseThrow(() -> {
-            log.info("Update address request failed: user not found, userId={}, addressId={}", userId, addressId);
+            log.warn("Update address request failed: user not found, userId={}, addressId={}", userId, addressId);
             return new ResourceNotFoundException("User not found");
         });
 
         UserAddress existingAddress = userAddressRepository.findById(addressId).orElseThrow(() -> {
-            log.info("Update address request failed: address not found, userId={}, addressId={}", userId, addressId);
+            log.warn("Update address request failed: address not found, userId={}, addressId={}", userId, addressId);
             return new ResourceNotFoundException("Address not found");
         });
 
@@ -148,12 +147,12 @@ public class UserAddressService {
         UUID userId = ((User) authentication.getPrincipal()).getId();
 
         User user = userRepository.findById(userId).orElseThrow(() -> {
-            log.info("Delete address request failed: user not found, userId={}, addressId={}", userId, addressId);
+            log.warn("Delete address request failed: user not found, userId={}, addressId={}", userId, addressId);
             return new ResourceNotFoundException("User not found");
         });
 
         UserAddress existingAddress = userAddressRepository.findById(addressId).orElseThrow(() -> {
-            log.info("Delete address request failed: address not found, userId={}, addressId={}", userId, addressId);
+            log.warn("Delete address request failed: address not found, userId={}, addressId={}", userId, addressId);
             return new ResourceNotFoundException("Address not found");
         });
 
@@ -189,12 +188,12 @@ public class UserAddressService {
         UUID userId = ((User) authentication.getPrincipal()).getId();
 
         User user = userRepository.findById(userId).orElseThrow(() -> {
-            log.info("Set default shipping request failed: user not found, userId={}, addressId={}", userId, addressId);
+            log.warn("Set default shipping request failed: user not found, userId={}, addressId={}", userId, addressId);
             return new ResourceNotFoundException("User not found");
         });
 
         UserAddress existingAddress = userAddressRepository.findById(addressId).orElseThrow(() -> {
-            log.info("Set default shipping request failed: address not found, userId={}, addressId={}", userId, addressId);
+            log.warn("Set default shipping request failed: address not found, userId={}, addressId={}", userId, addressId);
             return new ResourceNotFoundException("Address not found");
         });
 
@@ -218,12 +217,12 @@ public class UserAddressService {
         UUID userId = ((User) authentication.getPrincipal()).getId();
 
         User user = userRepository.findById(userId).orElseThrow(() -> {
-            log.info("Set Billing shipping request failed: user not found, userId={}, addressId={}", userId, addressId);
+            log.warn("Set default billing request failed: user not found, userId={}, addressId={}", userId, addressId);
             return new ResourceNotFoundException("User not found");
         });
 
         UserAddress existingAddress = userAddressRepository.findById(addressId).orElseThrow(() -> {
-            log.info("Set Billing shipping request failed: address not found, userId={}, addressId={}", userId, addressId);
+            log.warn("Set default billing request failed: address not found, userId={}, addressId={}", userId, addressId);
             return new ResourceNotFoundException("Address not found");
         });
 
@@ -233,7 +232,7 @@ public class UserAddressService {
         }
 
         if (existingAddress.isDefaultBilling()) {
-            log.info("Set Billing shipping request skipped: address is already default shipping, userId={}, addressId={}", userId, addressId);
+            log.info("Set default billing request skipped: address is already default billing, userId={}, addressId={}", userId, addressId);
             return;
         }
         userAddressRepository.removeDefaultBilling(user.getId());
