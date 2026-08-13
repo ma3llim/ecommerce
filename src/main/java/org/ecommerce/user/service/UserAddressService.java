@@ -183,4 +183,62 @@ public class UserAddressService {
 
         return "Address deleted successfully";
     }
+
+    @Transactional
+    public void updateDefaultShipping(UUID addressId, Authentication authentication) {
+        UUID userId = ((User) authentication.getPrincipal()).getId();
+
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.info("Set default shipping request failed: user not found, userId={}, addressId={}", userId, addressId);
+            return new ResourceNotFoundException("User not found");
+        });
+
+        UserAddress existingAddress = userAddressRepository.findById(addressId).orElseThrow(() -> {
+            log.info("Set default shipping request failed: address not found, userId={}, addressId={}", userId, addressId);
+            return new ResourceNotFoundException("Address not found");
+        });
+
+        if (!existingAddress.getUserId().equals(user.getId())) {
+            log.warn("Set default shipping request rejected: address does not belong to user, userId={}, addressId={}", userId, addressId);
+            throw new ResourceNotFoundException("Address not found");
+        }
+
+        if (existingAddress.isDefaultShipping()) {
+            log.info("Set default shipping request skipped: address is already default shipping, userId={}, addressId={}", userId, addressId);
+            return;
+        }
+        userAddressRepository.removeDefaultShipping(user.getId());
+
+        existingAddress.setDefaultShipping(true);
+        log.info("Default shipping address updated successfully, userId={}, addressId={}", userId, addressId);
+    }
+
+    @Transactional
+    public void updateDefaultBilling(UUID addressId, Authentication authentication) {
+        UUID userId = ((User) authentication.getPrincipal()).getId();
+
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.info("Set Billing shipping request failed: user not found, userId={}, addressId={}", userId, addressId);
+            return new ResourceNotFoundException("User not found");
+        });
+
+        UserAddress existingAddress = userAddressRepository.findById(addressId).orElseThrow(() -> {
+            log.info("Set Billing shipping request failed: address not found, userId={}, addressId={}", userId, addressId);
+            return new ResourceNotFoundException("Address not found");
+        });
+
+        if (!existingAddress.getUserId().equals(user.getId())) {
+            log.warn("Set Billing shipping request rejected: address does not belong to user, userId={}, addressId={}", userId, addressId);
+            throw new ResourceNotFoundException("Address not found");
+        }
+
+        if (existingAddress.isDefaultBilling()) {
+            log.info("Set Billing shipping request skipped: address is already default shipping, userId={}, addressId={}", userId, addressId);
+            return;
+        }
+        userAddressRepository.removeDefaultBilling(user.getId());
+
+        existingAddress.setDefaultBilling(true);
+        log.info("Default Billing address updated successfully, userId={}, addressId={}", userId, addressId);
+    }
 }

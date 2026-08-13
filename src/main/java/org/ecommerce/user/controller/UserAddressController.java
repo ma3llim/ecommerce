@@ -85,4 +85,36 @@ public class UserAddressController {
                         .build()
         );
     }
+
+    @PatchMapping("/{addressId}/default-shipping")
+    public ResponseEntity<ApiSuccessResponse<Void>> defaultShipping(
+            @PathVariable UUID addressId, Authentication authentication, HttpServletRequest request
+    ) {
+        userAddressService.updateDefaultShipping(addressId, authentication);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<Void>builder()
+                        .success(true)
+                        .message("Default shipping address updated successfully")
+                        .data(null)
+                        .path(request.getRequestURI())
+                        .build()
+        );
+    }
+
+    @PatchMapping("/{addressId}/default-billing")
+    public ResponseEntity<ApiSuccessResponse<Void>> defaultBilling(
+            @PathVariable UUID addressId, Authentication authentication, HttpServletRequest request
+    ) {
+        userAddressService.updateDefaultBilling(addressId, authentication);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<Void>builder()
+                        .success(true)
+                        .message("Default Billing address updated successfully")
+                        .data(null)
+                        .path(request.getRequestURI())
+                        .build()
+        );
+    }
 }
