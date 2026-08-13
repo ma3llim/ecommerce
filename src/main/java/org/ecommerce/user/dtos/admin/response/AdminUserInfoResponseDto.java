@@ -1,4 +1,4 @@
-package org.ecommerce.user.dtos.admin;
+package org.ecommerce.user.dtos.admin.response;
 
 import org.ecommerce.auth.enums.AccountStatus;
 import org.ecommerce.auth.enums.Role;
@@ -13,8 +13,6 @@ public record AdminUserInfoResponseDto(
         String phoneNumber,
         AccountStatus accountStatus,
         Role role,
-        boolean emailVerified,
-        Instant lastLoginAt,
         Instant createdAt
 ) {
 }
