@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 import org.ecommerce.common.validator.ValidImage.ValidImage;
 import org.springframework.web.multipart.MultipartFile;
 
-public record CategoryRequestDto(
+public record AddCategoryRequest(
         @NotBlank(message = "Category name is required")
         @Size(max = 100, message = "Category name must not exceed 100 characters")
         String name,

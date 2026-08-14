@@ -7,4 +7,6 @@ import java.util.UUID;
 
 public interface CategoryRepository extends JpaRepository<Category, UUID> {
     boolean existsBySlug(String categorySlug);
+
+    boolean existsBySlugAndIdNot(String categorySlug, UUID categoryId);
 }

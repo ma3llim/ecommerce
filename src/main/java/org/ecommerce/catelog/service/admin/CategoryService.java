@@ -3,7 +3,8 @@ package org.ecommerce.catelog.service.admin;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ecommerce.catelog.dtos.admin.request.CategoryRequestDto;
+import org.ecommerce.catelog.dtos.admin.request.AddCategoryRequest;
+import org.ecommerce.catelog.dtos.admin.request.UpdateCategoryRequest;
 import org.ecommerce.catelog.dtos.admin.response.CategoryResponse;
 import org.ecommerce.catelog.entities.Category;
 import org.ecommerce.catelog.repository.CategoryRepository;
@@ -28,7 +29,7 @@ public class CategoryService {
     private final CloudinaryService cloudinaryService;
     private final ObjectMapper objectMapper;
 
-    public CategoryResponse createCategory(CategoryRequestDto newCategory) {
+    public CategoryResponse createCategory(AddCategoryRequest newCategory) {
         String categorySlug = SlugUtils.generateSlug(newCategory.name());
 
         boolean categoryExisted = categoryRepository.existsBySlug(categorySlug);
@@ -69,21 +70,22 @@ public class CategoryService {
         );
     }
 
-    public CategoryResponse updateCategory(UUID categoryId, CategoryRequestDto categoryRequest) {
-        String oldPublicId = "";
+    public CategoryResponse updateCategory(UUID categoryId, UpdateCategoryRequest categoryRequest) {
+        String oldPublicId = null;
         Category categoryExisted = categoryRepository.findById(categoryId).orElseThrow(() -> {
             log.warn("Update category request failed: category not found, categoryId={}", categoryId);
             return new ResourceNotFoundException("Category is not found");
         });
 
-        String categorySlug = SlugUtils.generateSlug(categoryRequest.name());
-        boolean newSlugExisted = categoryRepository.existsBySlug(categorySlug);
-        if (newSlugExisted) {
-            log.warn("Update category request rejected: category slug already exists, categoryId={}, slug={}", categoryId, categorySlug);
-            throw new ResourceAlreadyExistsException("Category Slug is already existed");
-        }
-
         if (categoryRequest.name() != null) {
+            String categorySlug = SlugUtils.generateSlug(categoryRequest.name());
+
+            boolean newSlugExisted = categoryRepository.existsBySlugAndIdNot(categorySlug, categoryId);
+            if (newSlugExisted) {
+                log.warn("Update category request rejected: category slug already exists, categoryId={}, slug={}", categoryId, categorySlug);
+                throw new ResourceAlreadyExistsException("Category Slug is already existed");
+            }
+
             categoryExisted.setName(categoryRequest.name().trim());
             categoryExisted.setSlug(categorySlug);
         }
@@ -92,7 +94,7 @@ public class CategoryService {
             oldPublicId = categoryExisted.getImagePublicId();
 
             CloudinaryUploadResult cloudinaryUploadResult = cloudinaryService.uploadImage(categoryRequest.categoryImage(),
-                    CloudinaryFolder.PROFILE_IMAGES);
+                    CloudinaryFolder.CATEGORY_IMAGES);
 
             categoryExisted.setImageUrl(cloudinaryUploadResult.secureUrl());
             categoryExisted.setImagePublicId(cloudinaryUploadResult.publicId());
@@ -101,7 +103,7 @@ public class CategoryService {
         categoryRepository.save(categoryExisted);
         log.info("Category updated successfully, categoryId={}, slug={}", categoryId, categoryExisted.getSlug());
 
-        if (oldPublicId != null && oldPublicId.isEmpty()) {
+        if (oldPublicId != null && !oldPublicId.isBlank()) {
             cloudinaryService.removeImage(oldPublicId);
         }
 
@@ -117,7 +119,7 @@ public class CategoryService {
 
         categoryRepository.deleteById(categoryId);
         cloudinaryService.removeImage(categoryImagePublicId);
-        
+
         log.info("Category deleted successfully, categoryId={}", categoryId);
     }
 }

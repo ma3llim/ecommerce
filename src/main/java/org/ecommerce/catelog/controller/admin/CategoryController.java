@@ -3,7 +3,8 @@ package org.ecommerce.catelog.controller.admin;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.ecommerce.catelog.dtos.admin.request.CategoryRequestDto;
+import org.ecommerce.catelog.dtos.admin.request.AddCategoryRequest;
+import org.ecommerce.catelog.dtos.admin.request.UpdateCategoryRequest;
 import org.ecommerce.catelog.dtos.admin.response.CategoryResponse;
 import org.ecommerce.catelog.service.admin.CategoryService;
 import org.ecommerce.common.dtos.PageResponse;
@@ -27,7 +28,7 @@ public class CategoryController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiSuccessResponse<CategoryResponse>> createCategory(
-            @Valid @ModelAttribute CategoryRequestDto newCategory,
+            @Valid @ModelAttribute AddCategoryRequest newCategory,
             HttpServletRequest request
     ) {
         CategoryResponse categoryResponse = categoryService.createCategory(newCategory);
@@ -56,7 +57,7 @@ public class CategoryController {
 
     @PutMapping(value = "/{categoryId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiSuccessResponse<CategoryResponse>> updateCategory(@PathVariable UUID categoryId,
-                                                                               @Valid @ModelAttribute CategoryRequestDto categoryRequest, HttpServletRequest request) {
+                                                                               @Valid @ModelAttribute UpdateCategoryRequest categoryRequest, HttpServletRequest request) {
         CategoryResponse categoryResponse = categoryService.updateCategory(categoryId, categoryRequest);
         return ResponseEntity.ok(
                 ApiSuccessResponse.<CategoryResponse>builder()
