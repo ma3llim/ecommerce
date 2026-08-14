@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.catelog.dtos.admin.request.AddProductRequest;
 import org.ecommerce.catelog.dtos.admin.request.AddProductVariants;
+import org.ecommerce.catelog.dtos.admin.request.UpdateProduct;
 import org.ecommerce.catelog.dtos.admin.response.ProductResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantResponse;
 import org.ecommerce.catelog.service.admin.ProductService;
@@ -34,6 +35,23 @@ public class ProductsController {
                 ApiSuccessResponse.<ProductResponse>builder()
                         .success(true)
                         .message("Product created successfully")
+                        .data(productResponse)
+                        .path(request.getRequestURI()).build()
+        );
+    }
+
+    @PutMapping("/{productId}")
+    public ResponseEntity<ApiSuccessResponse<ProductResponse>> updateCategory(
+            @PathVariable UUID productId,
+            @Valid @RequestBody UpdateProduct productRequest,
+            HttpServletRequest request
+    ) {
+        ProductResponse productResponse = productService.updateProduct(productId, productRequest);
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ApiSuccessResponse.<ProductResponse>builder()
+                        .success(true)
+                        .message("Product updated successfully")
                         .data(productResponse)
                         .path(request.getRequestURI()).build()
         );

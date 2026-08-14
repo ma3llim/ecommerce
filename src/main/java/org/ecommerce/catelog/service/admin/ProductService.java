@@ -3,10 +3,12 @@ package org.ecommerce.catelog.service.admin;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.catelog.dtos.admin.request.AddProductRequest;
 import org.ecommerce.catelog.dtos.admin.request.AddProductVariants;
+import org.ecommerce.catelog.dtos.admin.request.UpdateProduct;
 import org.ecommerce.catelog.dtos.admin.response.ProductResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantImageResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantResponse;
@@ -140,4 +142,28 @@ public class ProductService {
         return imagesRecords;
     }
 
+    public ProductResponse updateProduct(UUID productId, @Valid UpdateProduct productRequest) {
+        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Product not found: {}", productId);
+            return new ResourceNotFoundException("Product not found");
+        });
+
+        if (productRequest.categoryId() != null) productExisted.setCategoryId(productRequest.categoryId());
+        if (productRequest.name() != null) {
+            String productSlug = SlugUtils.generateSlug(productRequest.name());
+
+            if (productRepository.existsBySlugAndIdNot(productSlug, productId)) {
+                throw new ResourceAlreadyExistsException("Product with this name already exists");
+            }
+
+            productExisted.setName(productRequest.name());
+            productExisted.setSlug(productSlug);
+        }
+        if (productRequest.description() != null) productExisted.setDescription(productRequest.description());
+        if (productRequest.specifications() != null) productExisted.setSpecifications(productRequest.specifications());
+
+        productRepository.save(productExisted);
+
+        return objectMapper.convertValue(productExisted, ProductResponse.class);
+    }
 }

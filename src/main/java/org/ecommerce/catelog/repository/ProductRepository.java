@@ -7,4 +7,6 @@ import java.util.UUID;
 
 public interface ProductRepository extends JpaRepository<Product, UUID> {
     boolean existsBySlug(String productSlug);
+
+    boolean existsBySlugAndIdNot(String productSlug, UUID productID);
 }
