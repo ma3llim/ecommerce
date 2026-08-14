@@ -10,6 +10,6 @@ public record CategoryResponse(
         String imageUrl,
         boolean active,
         Instant createdAt,
-        Instant updatedA
+        Instant updatedAt
 ) {
 }
