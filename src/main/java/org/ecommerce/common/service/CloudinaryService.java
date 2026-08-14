@@ -3,6 +3,7 @@ package org.ecommerce.common.service;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.common.dtos.CloudinaryUploadResult;
 import org.ecommerce.common.enums.CloudinaryFolder;
 import org.ecommerce.common.exception.FileStorageException;
@@ -14,6 +15,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CloudinaryService {
     private final Cloudinary cloudinary;
 
@@ -30,8 +32,11 @@ public class CloudinaryService {
             String secureUrl = result.get("secure_url").toString();
             String publicId = result.get("public_id").toString();
 
+            log.info("Image uploaded successfully, folder={}, publicId={}", folder, publicId);
+
             return new CloudinaryUploadResult(secureUrl, publicId);
         } catch (IOException e) {
+            log.error("Image upload failed, folder={}", folder, e);
             throw new FileStorageException("Failed to upload image", e);
         }
     }
@@ -45,8 +50,15 @@ public class CloudinaryService {
             Map<?, ?> result = cloudinary.uploader().destroy(publicId,
                     ObjectUtils.asMap("resource_type", "image")
             );
-            return "ok".equals(result.get("result"));
+            boolean deleted = "ok".equals(result.get("result"));
+
+            if (deleted) {
+                log.info("Image deleted successfully, publicId={}", publicId);
+            }
+
+            return deleted;
         } catch (IOException e) {
+            log.error("Image deletion failed, publicId={}", publicId, e);
             throw new FileStorageException("Failed to delete image", e);
         }
     }
