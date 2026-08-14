@@ -33,6 +33,7 @@ public class Category {
 
     @Column(nullable = false)
     private String imagePublicId;
+    
     private boolean active;
 
     @CreatedDate

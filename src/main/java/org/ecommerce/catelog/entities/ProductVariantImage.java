@@ -2,14 +2,11 @@ package org.ecommerce.catelog.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -18,35 +15,27 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name = "products")
+@Table(name = "product_variant_images")
 @EntityListeners(AuditingEntityListener.class)
-public class Product {
+public class ProductVariantImage {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "category_id", nullable = false)
-    private UUID categoryId;
+    @Column(name = "product_variant_id", nullable = false)
+    private UUID productVariantId;
 
     @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false, unique = true)
-    private String slug;
+    private String imageUrl;
 
     @Column(nullable = false)
-    private String description;
+    private String imagePublicId;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
-    private Map<String, Object> specifications;
+    @Column(nullable = false)
+    private int displayOrder;
 
-    @Column(name = "default_variant_id")
-    private UUID defaultVariantId;
-
-    @Column(name = "is_published", nullable = false)
-    @Builder.Default
-    private boolean published = false;
+    @Column(name = "is_primary", nullable = false)
+    private boolean primary;
 
     @CreatedDate
     private Instant createdAt;

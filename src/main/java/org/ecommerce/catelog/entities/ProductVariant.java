@@ -8,6 +8,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -18,35 +19,32 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name = "products")
+@Table(name = "product_variants")
 @EntityListeners(AuditingEntityListener.class)
-public class Product {
+public class ProductVariant {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "category_id", nullable = false)
-    private UUID categoryId;
-
-    @Column(nullable = false)
-    private String name;
+    @Column(name = "product_id", nullable = false)
+    private UUID productId;
 
     @Column(nullable = false, unique = true)
-    private String slug;
+    private String sku;
 
     @Column(nullable = false)
-    private String description;
+    private BigDecimal price;
+
+    @Column(nullable = false)
+    private int stockQuantity;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
-    private Map<String, Object> specifications;
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private Map<String, Object> attributes;
 
-    @Column(name = "default_variant_id")
-    private UUID defaultVariantId;
-
-    @Column(name = "is_published", nullable = false)
+    @Column(name = "is_active", nullable = false)
     @Builder.Default
-    private boolean published = false;
+    private boolean active = true;
 
     @CreatedDate
     private Instant createdAt;

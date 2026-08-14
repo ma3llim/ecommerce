@@ -4,16 +4,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.catelog.dtos.admin.request.AddProductRequest;
+import org.ecommerce.catelog.dtos.admin.request.AddProductVariants;
 import org.ecommerce.catelog.dtos.admin.response.ProductResponse;
+import org.ecommerce.catelog.dtos.admin.response.ProductVariantResponse;
 import org.ecommerce.catelog.service.admin.ProductService;
 import org.ecommerce.common.response.ApiSuccessResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -34,6 +35,22 @@ public class ProductsController {
                         .success(true)
                         .message("Product created successfully")
                         .data(productResponse)
+                        .path(request.getRequestURI()).build()
+        );
+    }
+
+    @PostMapping("/{productId}/variants")
+    public ResponseEntity<ApiSuccessResponse<ProductVariantResponse>> createVariants(
+            @PathVariable UUID productId, @Valid @ModelAttribute AddProductVariants addProductVariants,
+            HttpServletRequest request) {
+
+        ProductVariantResponse productVariantResponse = productService.addProductVariant(productId, addProductVariants);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                ApiSuccessResponse.<ProductVariantResponse>builder()
+                        .success(true)
+                        .message("Product variant created successfully")
+                        .data(productVariantResponse)
                         .path(request.getRequestURI()).build()
         );
     }
