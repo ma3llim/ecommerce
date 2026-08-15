@@ -294,4 +294,49 @@ public class ProductService {
 
         return objectMapper.convertValue(productVariantImage, ProductVariantImageResponse.class);
     }
+
+    public List<ProductVariantImageResponse> reorderImages(UUID productId, UUID variantId, ReorderImages reorderImages) {
+        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Product not found. productId={}", productId);
+            return new ResourceNotFoundException("Product not found");
+        });
+        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Variant not found. variantId={}", variantId);
+            return new ResourceNotFoundException("Variant not found");
+        });
+
+        List<ProductVariantImage> existingImages = productVariantImageRepository.findAllByProductVariantId(productVariantExisted.getId());
+
+        List<UUID> requestedIds = reorderImages.imageIds();
+        // Check duplicate IDs
+        Set<UUID> uniqueIds = new HashSet<>(requestedIds);
+
+        if (uniqueIds.size() != requestedIds.size()) {
+            throw new BadRequestException("Duplicate image IDs are not allowed");
+        }
+        // Get IDs that actually exist in DB
+        Set<UUID> existingIds = existingImages.stream().map(ProductVariantImage::getId).collect(Collectors.toSet());
+        if (!existingIds.containsAll(requestedIds)) {
+            throw new BadRequestException("One or more image IDs do not belong to this variant");
+        }
+
+        // Check missing image IDs
+        if (requestedIds.size() != existingIds.size()) {
+            throw new BadRequestException("All variant images must be included when reordering");
+        }
+
+        Map<UUID, ProductVariantImage> imageMap = existingImages.stream().collect(Collectors.toMap(ProductVariantImage::getId, image -> image));
+        // assign new display order
+        for (int i = 0; i < requestedIds.size(); i++) {
+            UUID imageId = requestedIds.get(i);
+            ProductVariantImage image = imageMap.get(imageId);
+            image.setDisplayOrder(i + 1);
+        }
+        List<ProductVariantImage> savedImages = productVariantImageRepository.saveAll(existingImages);
+        return objectMapper.convertValue(
+                savedImages,
+                new TypeReference<List<ProductVariantImageResponse>>() {
+                }
+        );
+    }
 }

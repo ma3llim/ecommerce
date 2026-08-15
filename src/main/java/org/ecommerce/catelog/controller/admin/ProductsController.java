@@ -133,4 +133,18 @@ public class ProductsController {
                         .data(productVariantImageResponse).path(request.getRequestURI()).build()
         );
     }
+
+    @PutMapping("/{productId}/variants/{variantId}/images/reorder")
+    public ResponseEntity<ApiSuccessResponse<List<ProductVariantImageResponse>>> reorderImages(
+            @PathVariable UUID productId, @PathVariable UUID variantId,
+            @Valid @RequestBody ReorderImages reorderImages, HttpServletRequest request
+    ) {
+        List<ProductVariantImageResponse> productVariantImageResponseList = productService.reorderImages(productId, variantId, reorderImages);
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ApiSuccessResponse.<List<ProductVariantImageResponse>>builder().success(true)
+                        .message("Product variant image order updated successfully")
+                        .data(productVariantImageResponseList).path(request.getRequestURI()).build()
+        );
+    }
 }
