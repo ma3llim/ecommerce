@@ -1,5 +1,8 @@
 package org.ecommerce.catelog.controller.admin;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +29,12 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/api/v1/admin/products")
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Admin - Product Management", description = "APIs for administrators to manage products, variants, and variant images")
 public class ProductsController {
     private final ProductService productService;
 
+    @Operation(summary = "Get all products", description = "Retrieves a paginated list of products sorted by creation date in descending order.")
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<PageResponse<ProductResponse>>> getProducts(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
@@ -38,13 +44,14 @@ public class ProductsController {
         return ResponseEntity.ok(
                 ApiSuccessResponse.<PageResponse<ProductResponse>>builder()
                         .success(true)
-                        .message("fetch products")
+                        .message("Products retrieved successfully")
                         .data(products)
                         .path(request.getRequestURI())
                         .build()
         );
     }
 
+    @Operation(summary = "Get product details", description = "Retrieves detailed information about a product, including its category, variants, variant images, specifications, and current status.")
     @GetMapping("/{productId}")
     public ResponseEntity<ApiSuccessResponse<ProductDetailsResponse>> getProduct(
             @PathVariable UUID productId, HttpServletRequest request) {
@@ -53,13 +60,14 @@ public class ProductsController {
         return ResponseEntity.ok(
                 ApiSuccessResponse.<ProductDetailsResponse>builder()
                         .success(true)
-                        .message("Product fetched successfully")
+                        .message("Product details retrieved successfully")
                         .data(productDetailsResponse)
                         .path(request.getRequestURI())
                         .build()
         );
     }
 
+    @Operation(summary = "Create product", description = "Creates a new product under the specified category. The product is created with an inactive/unpublished status until it is ready to be published.")
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<ProductResponse>> createProduct(
             @Valid @RequestBody AddProductRequest productRequest,
@@ -67,7 +75,7 @@ public class ProductsController {
 
         ProductResponse productResponse = productService.createProduct(productRequest);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(
+        return ResponseEntity.ok(
                 ApiSuccessResponse.<ProductResponse>builder()
                         .success(true)
                         .message("Product created successfully")
@@ -76,8 +84,9 @@ public class ProductsController {
         );
     }
 
+    @Operation(summary = "Update product", description = "Updates the details of an existing product, including its category, name, description, and specifications.")
     @PutMapping("/{productId}")
-    public ResponseEntity<ApiSuccessResponse<ProductResponse>> updateCategory(
+    public ResponseEntity<ApiSuccessResponse<ProductResponse>> updateProduct(
             @PathVariable UUID productId,
             @Valid @RequestBody UpdateProduct productRequest,
             HttpServletRequest request
@@ -93,6 +102,7 @@ public class ProductsController {
         );
     }
 
+    @Operation(summary = "Update product status", description = "Updates the visibility status of an existing product. The product is marked as published when the ACTIVE status is provided.")
     @PatchMapping("/{productId}/status")
     public ResponseEntity<ApiSuccessResponse<ProductResponse>> updateProductStatus(
             @PathVariable UUID productId, @Valid @RequestBody UpdateProductStatus productStatus,
@@ -106,6 +116,7 @@ public class ProductsController {
         );
     }
 
+    @Operation(summary = "Create product variant", description = "Creates a new variant for the specified product, including its price, stock quantity, attributes, and optional images.")
     @PostMapping("/{productId}/variants")
     public ResponseEntity<ApiSuccessResponse<ProductVariantResponse>> createVariants(
             @PathVariable UUID productId, @Valid @ModelAttribute AddProductVariants addProductVariants,
@@ -113,7 +124,7 @@ public class ProductsController {
 
         ProductVariantResponse productVariantResponse = productService.addProductVariant(productId, addProductVariants);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(
+        return ResponseEntity.ok(
                 ApiSuccessResponse.<ProductVariantResponse>builder()
                         .success(true)
                         .message("Product variant created successfully")
@@ -122,6 +133,7 @@ public class ProductsController {
         );
     }
 
+    @Operation(summary = "Update product variant", description = "Updates an existing product variant, including its price, stock quantity, and attributes.")
     @PutMapping("/{productId}/variants/{variantId}")
     public ResponseEntity<ApiSuccessResponse<ProductVariantResponse>> updateVariants(
             @PathVariable UUID productId, @PathVariable UUID variantId,
@@ -138,6 +150,7 @@ public class ProductsController {
         );
     }
 
+    @Operation(summary = "Delete product variant", description = "Deletes an existing product variant and its associated images.")
     @DeleteMapping("/{productId}/variants/{variantId}")
     public ResponseEntity<ApiSuccessResponse<Void>> deleteVariants(
             @PathVariable UUID productId, @PathVariable UUID variantId,
@@ -146,11 +159,12 @@ public class ProductsController {
         productService.deleteVariant(productId, variantId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
                 ApiSuccessResponse.<Void>builder().success(true)
-                        .message("Product variant delete successfully")
+                        .message("Product variant deleted successfully")
                         .data(null).path(request.getRequestURI()).build()
         );
     }
 
+    @Operation(summary = "Update product variant status", description = "Updates the active status of an existing product variant.")
     @PutMapping("/{productId}/variants/{variantId}/status")
     public ResponseEntity<ApiSuccessResponse<ProductVariantResponse>> updateVariantStatus(
             @PathVariable UUID productId, @PathVariable UUID variantId,
@@ -166,6 +180,7 @@ public class ProductsController {
         );
     }
 
+    @Operation(summary = "Upload product variant images", description = "Uploads one or more images for the specified product variant and returns the uploaded image details.")
     @PostMapping("/{productId}/variants/{variantId}/images")
     public ResponseEntity<ApiSuccessResponse<List<ProductVariantImageResponse>>> uploadsImages(
             @PathVariable UUID productId, @PathVariable UUID variantId,
@@ -176,11 +191,12 @@ public class ProductsController {
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ApiSuccessResponse.<List<ProductVariantImageResponse>>builder().success(true)
-                        .message("Product variant image added successfully")
+                        .message("Product variant images uploaded successfully")
                         .data(productVariantImageResponse).path(request.getRequestURI()).build()
         );
     }
 
+    @Operation(summary = "Replace product variant image", description = "Replaces an existing product variant image with a new image while retaining the image resource.")
     @PutMapping("/{productId}/variants/{variantId}/images/{variantImageId}")
     public ResponseEntity<ApiSuccessResponse<ProductVariantImageResponse>> uploadsImages(
             @PathVariable UUID productId, @PathVariable UUID variantId, @PathVariable UUID variantImageId,
@@ -196,6 +212,7 @@ public class ProductsController {
         );
     }
 
+    @Operation(summary = "Set product variant image as primary", description = "Sets the specified product variant image as the primary image. Any existing primary image for the variant will no longer be primary.")
     @PatchMapping("/{productId}/variants/{variantId}/images/{variantImageId}/primary")
     public ResponseEntity<ApiSuccessResponse<ProductVariantImageResponse>> setVariantImagePrimary(
             @PathVariable UUID productId, @PathVariable UUID variantId, @PathVariable UUID variantImageId,
@@ -206,11 +223,12 @@ public class ProductsController {
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ApiSuccessResponse.<ProductVariantImageResponse>builder().success(true)
-                        .message("Product variant image replaced successfully")
+                        .message("Product variant image set as primary successfully")
                         .data(productVariantImageResponse).path(request.getRequestURI()).build()
         );
     }
 
+    @Operation(summary = "Reorder product variant images", description = "Updates the display order of all images associated with a product variant. All existing image IDs must be included in the requested order.")
     @PutMapping("/{productId}/variants/{variantId}/images/reorder")
     public ResponseEntity<ApiSuccessResponse<List<ProductVariantImageResponse>>> reorderImages(
             @PathVariable UUID productId, @PathVariable UUID variantId,
@@ -225,6 +243,7 @@ public class ProductsController {
         );
     }
 
+    @Operation(summary = "Delete product variant image", description = "Deletes an image associated with a product variant. If the deleted image is the primary image, the next available image is promoted to primary.")
     @DeleteMapping("/{productId}/variants/{variantId}/images/{imageVariantId}")
     public ResponseEntity<ApiSuccessResponse<Void>> deleteVariantImage(
             @PathVariable UUID productId, @PathVariable UUID variantId, @PathVariable UUID imageVariantId,
@@ -233,7 +252,7 @@ public class ProductsController {
         productService.deleteVariantImage(productId, variantId, imageVariantId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
                 ApiSuccessResponse.<Void>builder().success(true)
-                        .message("Product variant image delete successfully")
+                        .message("Product variant image deleted successfully")
                         .data(null).path(request.getRequestURI()).build()
         );
     }
