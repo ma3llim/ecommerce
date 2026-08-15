@@ -12,7 +12,7 @@ public record ProductResponse(
         String description,
         Map<String, Object> specifications,
         UUID defaultVariantId,
-        boolean active,
+        boolean published,
         Instant createdAt,
         Instant updatedAt
 ) {

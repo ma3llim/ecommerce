@@ -21,6 +21,7 @@ import org.ecommerce.catelog.repository.ProductVariantImageRepository;
 import org.ecommerce.catelog.repository.ProductVariantRepository;
 import org.ecommerce.common.constants.AppConstants;
 import org.ecommerce.common.dtos.CloudinaryUploadResult;
+import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.enums.CloudinaryFolder;
 import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ResourceAlreadyExistsException;
@@ -28,6 +29,8 @@ import org.ecommerce.common.exception.ResourceNotFoundException;
 import org.ecommerce.common.service.CloudinaryService;
 import org.ecommerce.common.utils.SkuUtils;
 import org.ecommerce.common.utils.SlugUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,6 +48,23 @@ public class ProductService {
     private final ProductVariantImageRepository productVariantImageRepository;
     private final CloudinaryService cloudinaryService;
     private final ObjectMapper objectMapper;
+
+    public PageResponse<ProductResponse> getProducts(Pageable pageable) {
+        Page<Product> products = productRepository.findAll(pageable);
+
+        Page<ProductResponse> productResponses = products.map(
+                product -> objectMapper.convertValue(product, ProductResponse.class));
+
+        return new PageResponse<>(
+                productResponses.getContent(),
+                productResponses.getNumber(),
+                productResponses.getSize(),
+                productResponses.getTotalElements(),
+                productResponses.getTotalPages(),
+                productResponses.isFirst(),
+                productResponses.isLast()
+        );
+    }
 
     public ProductResponse createProduct(AddProductRequest productRequest) {
         Category category = categoryRepository.findById(productRequest.categoryId()).orElseThrow(() -> {
@@ -71,6 +91,10 @@ public class ProductService {
         productRepository.save(newProduct);
 
         return objectMapper.convertValue(newProduct, ProductResponse.class);
+    }
+
+    public static void getProduct(UUID productId) {
+
     }
 
     @Transactional
@@ -123,6 +147,15 @@ public class ProductService {
         return new ProductVariantResponse(savedVariant.getId(), savedVariant.getSku(),
                 savedVariant.getPrice(), savedVariant.getStockQuantity(),
                 savedVariant.getAttributes(), savedVariant.isActive(), imageResponses);
+    }
+
+    public ProductResponse updateProductStatus(UUID productId, VisibleStatus status) {
+        Product product = productRepository.findById(productId).orElseThrow(() ->
+                new ResourceNotFoundException("Product not found")
+        );
+        product.setPublished(status == VisibleStatus.ACTIVE);
+        Product savedProduct = productRepository.save(product);
+        return objectMapper.convertValue(savedProduct, ProductResponse.class);
     }
 
     private List<ProductVariantImage> uploadAndCreateImageRecords(UUID productVariantId, List<MultipartFile> images) {

@@ -8,7 +8,11 @@ import org.ecommerce.catelog.dtos.admin.response.ProductResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantImageResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantResponse;
 import org.ecommerce.catelog.service.admin.ProductService;
+import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.response.ApiSuccessResponse;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,6 +27,22 @@ import java.util.UUID;
 @RequestMapping("/api/v1/admin/products")
 public class ProductsController {
     private final ProductService productService;
+
+    @GetMapping
+    public ResponseEntity<ApiSuccessResponse<PageResponse<ProductResponse>>> getProducts(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable, HttpServletRequest request) {
+        PageResponse<ProductResponse> products = productService.getProducts(pageable);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<PageResponse<ProductResponse>>builder()
+                        .success(true)
+                        .message("fetch products")
+                        .data(products)
+                        .path(request.getRequestURI())
+                        .build()
+        );
+    }
 
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<ProductResponse>> createProduct(
@@ -54,6 +74,19 @@ public class ProductsController {
                         .message("Product updated successfully")
                         .data(productResponse)
                         .path(request.getRequestURI()).build()
+        );
+    }
+
+    @PatchMapping("/{productId}/status")
+    public ResponseEntity<ApiSuccessResponse<ProductResponse>> updateProductStatus(
+            @PathVariable UUID productId, @Valid @RequestBody UpdateProductStatus productStatus,
+            HttpServletRequest request
+    ) {
+        ProductResponse productResponse = productService.updateProductStatus(productId, productStatus.status());
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ApiSuccessResponse.<ProductResponse>builder().success(true)
+                        .message("Product status updated successfully")
+                        .data(productResponse).path(request.getRequestURI()).build()
         );
     }
 
