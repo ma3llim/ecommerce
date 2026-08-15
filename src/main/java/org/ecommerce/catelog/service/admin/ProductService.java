@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.catelog.dtos.admin.request.AddProductRequest;
 import org.ecommerce.catelog.dtos.admin.request.AddProductVariants;
 import org.ecommerce.catelog.dtos.admin.request.UpdateProduct;
+import org.ecommerce.catelog.dtos.admin.request.UpdateProductVariant;
 import org.ecommerce.catelog.dtos.admin.response.ProductResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantImageResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantResponse;
@@ -75,6 +76,7 @@ public class ProductService {
 
     @Transactional
     public ProductVariantResponse addProductVariant(UUID productId, AddProductVariants addProductVariants) {
+        // remove this after frontend send valid data
         Map<String, Object> attributes;
         try {
             attributes = objectMapper.readValue(
@@ -165,5 +167,25 @@ public class ProductService {
         productRepository.save(productExisted);
 
         return objectMapper.convertValue(productExisted, ProductResponse.class);
+    }
+
+    public ProductVariantResponse updateProductVariant(UUID productId, UUID variantId, @Valid UpdateProductVariant productVariant) {
+        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Product not found: {}", productId);
+            return new ResourceNotFoundException("Product not found");
+        });
+        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Variant not found: {}", variantId);
+            return new ResourceNotFoundException("Variant not found");
+        });
+
+        if (productVariant.price() != null) productVariantExisted.setPrice(productVariant.price());
+        if (productVariant.stockQuantity() != null)
+            productVariantExisted.setStockQuantity(productVariant.stockQuantity());
+        if (productVariant.attributes() != null) productVariantExisted.setAttributes(productVariant.attributes());
+
+        productVariantRepository.save(productVariantExisted);
+
+        return objectMapper.convertValue(productVariantExisted, ProductVariantResponse.class);
     }
 }

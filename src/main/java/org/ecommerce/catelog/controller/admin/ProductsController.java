@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.ecommerce.catelog.dtos.admin.request.AddProductRequest;
 import org.ecommerce.catelog.dtos.admin.request.AddProductVariants;
 import org.ecommerce.catelog.dtos.admin.request.UpdateProduct;
+import org.ecommerce.catelog.dtos.admin.request.UpdateProductVariant;
 import org.ecommerce.catelog.dtos.admin.response.ProductResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantResponse;
 import org.ecommerce.catelog.service.admin.ProductService;
@@ -68,6 +69,24 @@ public class ProductsController {
                 ApiSuccessResponse.<ProductVariantResponse>builder()
                         .success(true)
                         .message("Product variant created successfully")
+                        .data(productVariantResponse)
+                        .path(request.getRequestURI()).build()
+        );
+    }
+
+    @PutMapping("/{productId}/variants/{variantId}")
+    public ResponseEntity<ApiSuccessResponse<ProductVariantResponse>> updateVariants(
+            @PathVariable UUID productId, @PathVariable UUID variantId,
+            @Valid @RequestBody UpdateProductVariant productVariant,
+            HttpServletRequest request
+    ) {
+        ProductVariantResponse productVariantResponse = productService
+                .updateProductVariant(productId, variantId, productVariant);
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ApiSuccessResponse.<ProductVariantResponse>builder()
+                        .success(true)
+                        .message("Product variant updated successfully")
                         .data(productVariantResponse)
                         .path(request.getRequestURI()).build()
         );
