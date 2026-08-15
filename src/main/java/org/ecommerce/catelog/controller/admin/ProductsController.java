@@ -147,4 +147,17 @@ public class ProductsController {
                         .data(productVariantImageResponseList).path(request.getRequestURI()).build()
         );
     }
+
+    @DeleteMapping("/{productId}/variants/{variantId}/images/{imageVariantId}")
+    public ResponseEntity<ApiSuccessResponse<Void>> deleteVariantImage(
+            @PathVariable UUID productId, @PathVariable UUID variantId, @PathVariable UUID imageVariantId,
+            HttpServletRequest request
+    ) {
+        productService.deleteVariantImage(productId, variantId, imageVariantId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
+                ApiSuccessResponse.<Void>builder().success(true)
+                        .message("Product variant image delete successfully")
+                        .data(null).path(request.getRequestURI()).build()
+        );
+    }
 }

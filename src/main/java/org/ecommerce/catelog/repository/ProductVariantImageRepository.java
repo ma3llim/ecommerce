@@ -13,4 +13,6 @@ public interface ProductVariantImageRepository extends JpaRepository<ProductVari
     Optional<ProductVariantImage> findByProductVariantIdAndPrimaryTrue(UUID variantId);
 
     List<ProductVariantImage> findAllByProductVariantId(UUID variantId);
+
+    List<ProductVariantImage> findAllByProductVariantIdOrderByDisplayOrderAsc(UUID variantId);
 }

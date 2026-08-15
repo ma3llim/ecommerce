@@ -339,4 +339,50 @@ public class ProductService {
                 }
         );
     }
+
+    @Transactional
+    public void deleteVariantImage(UUID productId, UUID variantId, UUID imageVariantId) {
+        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Product not found. productId={}", productId);
+            return new ResourceNotFoundException("Product not found");
+        });
+
+        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Variant not found. variantId={}", variantId);
+            return new ResourceNotFoundException("Variant not found");
+        });
+
+        if (!productVariantExisted.getProductId().equals(productExisted.getId())) {
+            throw new ResourceNotFoundException("Variant not found for this product");
+        }
+
+        ProductVariantImage productVariantImageExisted = productVariantImageRepository.findById(imageVariantId)
+                .orElseThrow(() -> {
+                    log.warn("Variant image not found. imageId={}, variantId={}", imageVariantId, variantId);
+                    return new ResourceNotFoundException("Variant image not found");
+                });
+
+        if (!productVariantImageExisted.getProductVariantId().equals(productVariantExisted.getId())) {
+            throw new ResourceNotFoundException("Variant Image is not found by product variant");
+        }
+
+        boolean deletedImageWasPrimary = productVariantImageExisted.isPrimary();
+
+        cloudinaryService.removeImage(productVariantImageExisted.getImagePublicId());
+
+        productVariantImageRepository.delete(productVariantImageExisted);
+
+        List<ProductVariantImage> remainingImages = productVariantImageRepository.findAllByProductVariantIdOrderByDisplayOrderAsc(variantId);
+
+        for (int i = 0; i < remainingImages.size(); i++) {
+            ProductVariantImage remainingImage = remainingImages.get(i);
+
+            remainingImage.setDisplayOrder(i + 1);
+
+            if (deletedImageWasPrimary) {
+                remainingImage.setPrimary(i == 0);
+            }
+        }
+        productVariantImageRepository.saveAll(remainingImages);
+    }
 }
