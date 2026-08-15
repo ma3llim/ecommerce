@@ -103,4 +103,19 @@ public class ProductsController {
                         .data(productVariantImageResponse).path(request.getRequestURI()).build()
         );
     }
+
+    @PutMapping("/{productId}/variants/{variantId}/images/{variantImageId}")
+    public ResponseEntity<ApiSuccessResponse<ProductVariantImageResponse>> uploadsImages(
+            @PathVariable UUID productId, @PathVariable UUID variantId, @PathVariable UUID variantImageId,
+            @Valid @ModelAttribute ReplaceImage image, HttpServletRequest request
+    ) {
+        ProductVariantImageResponse productVariantImageResponse = productService.replaceImage(
+                productId, variantId, variantImageId, image);
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ApiSuccessResponse.<ProductVariantImageResponse>builder().success(true)
+                        .message("Product variant image replaced successfully")
+                        .data(productVariantImageResponse).path(request.getRequestURI()).build()
+        );
+    }
 }

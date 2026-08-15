@@ -239,4 +239,34 @@ public class ProductService {
                 new TypeReference<List<ProductVariantImageResponse>>() {
                 });
     }
+
+    public ProductVariantImageResponse replaceImage(UUID productId, UUID variantId, UUID variantImageId, ReplaceImage image) {
+        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Product not found. productId={}", productId);
+            return new ResourceNotFoundException("Product not found");
+        });
+        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Variant not found. variantId={}", variantId);
+            return new ResourceNotFoundException("Variant not found");
+        });
+
+        ProductVariantImage productVariantImage = productVariantImageRepository.findById(variantImageId).orElseThrow(() -> {
+            log.warn("Variant image not found. variantImageId={}", variantImageId);
+            return new ResourceNotFoundException("variantImageId not found");
+        });
+
+        String oldPublicId = productVariantImage.getImagePublicId();
+
+        CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(image.image(), CloudinaryFolder.PRODUCT_IMAGES);
+
+        productVariantImage.setImageUrl(uploadResult.secureUrl());
+        productVariantImage.setImagePublicId(uploadResult.publicId());
+
+        productVariantImageRepository.save(productVariantImage);
+        if (oldPublicId != null && !oldPublicId.isEmpty()) {
+            cloudinaryService.removeImage(oldPublicId);
+        }
+
+        return objectMapper.convertValue(productVariantImage, ProductVariantImageResponse.class);
+    }
 }
