@@ -6,4 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.UUID;
 
 public interface ProductVariantImageRepository extends JpaRepository<ProductVariantImage, UUID> {
+    int countByProductVariantId(UUID variantId);
 }

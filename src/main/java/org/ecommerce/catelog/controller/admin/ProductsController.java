@@ -3,11 +3,9 @@ package org.ecommerce.catelog.controller.admin;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.ecommerce.catelog.dtos.admin.request.AddProductRequest;
-import org.ecommerce.catelog.dtos.admin.request.AddProductVariants;
-import org.ecommerce.catelog.dtos.admin.request.UpdateProduct;
-import org.ecommerce.catelog.dtos.admin.request.UpdateProductVariant;
+import org.ecommerce.catelog.dtos.admin.request.*;
 import org.ecommerce.catelog.dtos.admin.response.ProductResponse;
+import org.ecommerce.catelog.dtos.admin.response.ProductVariantImageResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantResponse;
 import org.ecommerce.catelog.service.admin.ProductService;
 import org.ecommerce.common.response.ApiSuccessResponse;
@@ -16,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -84,11 +83,24 @@ public class ProductsController {
                 .updateProductVariant(productId, variantId, productVariant);
 
         return ResponseEntity.status(HttpStatus.OK).body(
-                ApiSuccessResponse.<ProductVariantResponse>builder()
-                        .success(true)
+                ApiSuccessResponse.<ProductVariantResponse>builder().success(true)
                         .message("Product variant updated successfully")
-                        .data(productVariantResponse)
-                        .path(request.getRequestURI()).build()
+                        .data(productVariantResponse).path(request.getRequestURI()).build()
+        );
+    }
+
+    @PostMapping("/{productId}/variants/{variantId}/images")
+    public ResponseEntity<ApiSuccessResponse<List<ProductVariantImageResponse>>> uploadsImages(
+            @PathVariable UUID productId, @PathVariable UUID variantId,
+            @Valid @ModelAttribute AddImages images,
+            HttpServletRequest request
+    ) {
+        List<ProductVariantImageResponse> productVariantImageResponse = productService.uploadsImage(productId, variantId, images);
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ApiSuccessResponse.<List<ProductVariantImageResponse>>builder().success(true)
+                        .message("Product variant image added successfully")
+                        .data(productVariantImageResponse).path(request.getRequestURI()).build()
         );
     }
 }

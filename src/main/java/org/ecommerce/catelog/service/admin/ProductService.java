@@ -6,10 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ecommerce.catelog.dtos.admin.request.AddProductRequest;
-import org.ecommerce.catelog.dtos.admin.request.AddProductVariants;
-import org.ecommerce.catelog.dtos.admin.request.UpdateProduct;
-import org.ecommerce.catelog.dtos.admin.request.UpdateProductVariant;
+import org.ecommerce.catelog.dtos.admin.request.*;
 import org.ecommerce.catelog.dtos.admin.response.ProductResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantImageResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantResponse;
@@ -21,6 +18,7 @@ import org.ecommerce.catelog.repository.CategoryRepository;
 import org.ecommerce.catelog.repository.ProductRepository;
 import org.ecommerce.catelog.repository.ProductVariantImageRepository;
 import org.ecommerce.catelog.repository.ProductVariantRepository;
+import org.ecommerce.common.constants.AppConstants;
 import org.ecommerce.common.dtos.CloudinaryUploadResult;
 import org.ecommerce.common.enums.CloudinaryFolder;
 import org.ecommerce.common.exception.BadRequestException;
@@ -189,5 +187,56 @@ public class ProductService {
         productVariantRepository.save(productVariantExisted);
 
         return objectMapper.convertValue(productVariantExisted, ProductVariantResponse.class);
+    }
+
+    public List<ProductVariantImageResponse> uploadsImage(UUID productId, UUID variantId, @Valid AddImages images) {
+        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Product not found. productId={}", productId);
+            return new ResourceNotFoundException("Product not found");
+        });
+        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Variant not found. variantId={}", variantId);
+            return new ResourceNotFoundException("Variant not found");
+        });
+
+        int existingImageCount = productVariantImageRepository.countByProductVariantId(variantId);
+        log.debug("Existing variant image count. variantId={}, existingImageCount={}", variantId, existingImageCount);
+
+
+        if (existingImageCount > AppConstants.MAX_FILE_UPLOAD) {
+            log.warn("Maximum image limit reached. variantId={}, existingImageCount={}, maxAllowed={}", variantId, existingImageCount, AppConstants.MAX_FILE_UPLOAD);
+            throw new ResourceAlreadyExistsException("Maximum 5 image allowed");
+        }
+        int totalImage = existingImageCount + images.images().size();
+        log.info(String.valueOf(totalImage));
+        if (totalImage > AppConstants.MAX_FILE_UPLOAD) {
+            log.warn("Image upload rejected. variantId={}, existingImageCount={}, requestedImageCount={}, totalImageCount={}, maxAllowed={}", variantId, existingImageCount, images.images().size(), totalImage, AppConstants.MAX_FILE_UPLOAD);
+            throw new ResourceAlreadyExistsException("Maximum 5 images allowed");
+        }
+
+        List<ProductVariantImage> productVariantImages = new ArrayList<>();
+        for (int i = 0; i < images.images().size(); i++) {
+            MultipartFile image = images.images().get(i);
+            CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(image, CloudinaryFolder.PRODUCT_IMAGES);
+            int displayOrder = existingImageCount + i + 1;
+            boolean primary = existingImageCount == 0 && i == 0;
+
+            ProductVariantImage imageRecord = ProductVariantImage.builder()
+                    .productVariantId(variantId)
+                    .imageUrl(uploadResult.secureUrl())
+                    .imagePublicId(uploadResult.publicId())
+                    .displayOrder(displayOrder)
+                    .primary(primary)
+                    .build();
+
+            productVariantImages.add(imageRecord);
+        }
+
+        productVariantImageRepository.saveAll(productVariantImages);
+
+        return objectMapper.convertValue(
+                productVariantImages,
+                new TypeReference<List<ProductVariantImageResponse>>() {
+                });
     }
 }
