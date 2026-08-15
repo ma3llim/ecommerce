@@ -1,10 +1,10 @@
 package org.ecommerce.catelog.dtos.admin.request;
 
 import jakarta.validation.constraints.NotNull;
-import org.ecommerce.catelog.enums.VariantStatus;
+import org.ecommerce.catelog.enums.VisibleStatus;
 
 public record UpdateVariantStatus(
         @NotNull
-        VariantStatus status
+        VisibleStatus status
 ) {
 }

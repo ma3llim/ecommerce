@@ -14,7 +14,7 @@ import org.ecommerce.catelog.entities.Category;
 import org.ecommerce.catelog.entities.Product;
 import org.ecommerce.catelog.entities.ProductVariant;
 import org.ecommerce.catelog.entities.ProductVariantImage;
-import org.ecommerce.catelog.enums.VariantStatus;
+import org.ecommerce.catelog.enums.VisibleStatus;
 import org.ecommerce.catelog.repository.CategoryRepository;
 import org.ecommerce.catelog.repository.ProductRepository;
 import org.ecommerce.catelog.repository.ProductVariantImageRepository;
@@ -414,7 +414,7 @@ public class ProductService {
         productVariantRepository.delete(productVariantExisted);
     }
 
-    public ProductVariantResponse updateVariantStatus(UUID productId, UUID variantId, VariantStatus status) {
+    public ProductVariantResponse updateVariantStatus(UUID productId, UUID variantId, VisibleStatus status) {
         Product product = productRepository.findById(productId).orElseThrow(() ->
                 new ResourceNotFoundException("Product not found")
         );
@@ -426,7 +426,7 @@ public class ProductService {
         if (!variant.getProductId().equals(product.getId())) {
             throw new ResourceNotFoundException("Variant not found for this product");
         }
-        variant.setActive(status == VariantStatus.ACTIVE);
+        variant.setActive(status == VisibleStatus.ACTIVE);
 
         ProductVariant savedVariant = productVariantRepository.save(variant);
 
