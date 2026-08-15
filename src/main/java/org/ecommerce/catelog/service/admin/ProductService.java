@@ -108,16 +108,18 @@ public class ProductService {
 
         ProductVariant savedVariant = productVariantRepository.save(variant);
 
-        List<ProductVariantImage> productVariantImages = uploadAndCreateImageRecords(savedVariant.getId(), addProductVariants.images());
-        productVariantImageRepository.saveAll(productVariantImages);
-        if (productExisted.getDefaultVariantId() == null) {
-            productExisted.setDefaultVariantId(savedVariant.getId());
-        }
+        List<ProductVariantImage> productVariantImages = List.of();
+        if (addProductVariants.images() != null && !addProductVariants.images().isEmpty()) {
+            productVariantImages = uploadAndCreateImageRecords(savedVariant.getId(), addProductVariants.images());
+            productVariantImageRepository.saveAll(productVariantImages);
+            if (productExisted.getDefaultVariantId() == null) {
+                productExisted.setDefaultVariantId(savedVariant.getId());
+            }
 
-        List<ProductVariantImageResponse> imageResponses = productVariantImages
-                .stream().map(image -> objectMapper
-                        .convertValue(image, ProductVariantImageResponse.class)
-                ).toList();
+        }
+        List<ProductVariantImageResponse> imageResponses = productVariantImages.stream()
+                .map(image -> objectMapper.convertValue(image, ProductVariantImageResponse.class))
+                .toList();
 
         return new ProductVariantResponse(savedVariant.getId(), savedVariant.getSku(),
                 savedVariant.getPrice(), savedVariant.getStockQuantity(),

@@ -18,9 +18,8 @@ public record AddProductVariants(
         @NotBlank
         String attributes,
 
-        @NotEmpty
         @ValidImage
-        @Size(max = 5)
+        @Size(max = 5, message = "Maximum 5 images allowed")
         List<MultipartFile> images
 ) {
 }
