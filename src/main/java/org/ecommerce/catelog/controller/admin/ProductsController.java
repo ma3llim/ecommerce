@@ -118,4 +118,19 @@ public class ProductsController {
                         .data(productVariantImageResponse).path(request.getRequestURI()).build()
         );
     }
+
+    @PatchMapping("/{productId}/variants/{variantId}/images/{variantImageId}/primary")
+    public ResponseEntity<ApiSuccessResponse<ProductVariantImageResponse>> setVariantImagePrimary(
+            @PathVariable UUID productId, @PathVariable UUID variantId, @PathVariable UUID variantImageId,
+            HttpServletRequest request
+    ) {
+        ProductVariantImageResponse productVariantImageResponse = productService.setVariantImagePrimary(
+                productId, variantId, variantImageId);
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ApiSuccessResponse.<ProductVariantImageResponse>builder().success(true)
+                        .message("Product variant image replaced successfully")
+                        .data(productVariantImageResponse).path(request.getRequestURI()).build()
+        );
+    }
 }

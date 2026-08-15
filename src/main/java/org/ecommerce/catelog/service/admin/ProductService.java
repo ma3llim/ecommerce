@@ -269,4 +269,29 @@ public class ProductService {
 
         return objectMapper.convertValue(productVariantImage, ProductVariantImageResponse.class);
     }
+
+    public ProductVariantImageResponse setVariantImagePrimary(UUID productId, UUID variantId, UUID variantImageId) {
+        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Product not found. productId={}", productId);
+            return new ResourceNotFoundException("Product not found");
+        });
+        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Variant not found. variantId={}", variantId);
+            return new ResourceNotFoundException("Variant not found");
+        });
+
+        ProductVariantImage productVariantImage = productVariantImageRepository.findById(variantImageId).orElseThrow(() -> {
+            log.warn("Variant image not found. variantImageId={}", variantImageId);
+            return new ResourceNotFoundException("variantImageId not found");
+        });
+
+        productVariantImageRepository.findByProductVariantIdAndPrimaryTrue(variantId)
+                .ifPresent(currentPrimary -> currentPrimary.setPrimary(false));
+
+        productVariantImage.setPrimary(true);
+
+        productVariantImageRepository.save(productVariantImage);
+
+        return objectMapper.convertValue(productVariantImage, ProductVariantImageResponse.class);
+    }
 }
