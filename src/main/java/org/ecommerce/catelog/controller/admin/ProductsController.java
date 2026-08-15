@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -117,7 +118,7 @@ public class ProductsController {
     }
 
     @Operation(summary = "Create product variant", description = "Creates a new variant for the specified product, including its price, stock quantity, attributes, and optional images.")
-    @PostMapping("/{productId}/variants")
+    @PostMapping(value = "/{productId}/variants", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiSuccessResponse<ProductVariantResponse>> createVariants(
             @PathVariable UUID productId, @Valid @ModelAttribute AddProductVariants addProductVariants,
             HttpServletRequest request) {
@@ -181,7 +182,7 @@ public class ProductsController {
     }
 
     @Operation(summary = "Upload product variant images", description = "Uploads one or more images for the specified product variant and returns the uploaded image details.")
-    @PostMapping("/{productId}/variants/{variantId}/images")
+    @PostMapping(value = "/{productId}/variants/{variantId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiSuccessResponse<List<ProductVariantImageResponse>>> uploadsImages(
             @PathVariable UUID productId, @PathVariable UUID variantId,
             @Valid @ModelAttribute AddImages images,
@@ -197,7 +198,7 @@ public class ProductsController {
     }
 
     @Operation(summary = "Replace product variant image", description = "Replaces an existing product variant image with a new image while retaining the image resource.")
-    @PutMapping("/{productId}/variants/{variantId}/images/{variantImageId}")
+    @PutMapping(value = "/{productId}/variants/{variantId}/images/{variantImageId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiSuccessResponse<ProductVariantImageResponse>> uploadsImages(
             @PathVariable UUID productId, @PathVariable UUID variantId, @PathVariable UUID variantImageId,
             @Valid @ModelAttribute ReplaceImage image, HttpServletRequest request
