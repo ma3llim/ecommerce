@@ -1,6 +1,8 @@
 package org.ecommerce.catelog.controller.admin;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +22,11 @@ import java.util.UUID;
 @RequestMapping("/api/v1/admin/products/{productId}/faqs")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Admin - Product FAQ Management", description = "APIs for administrators to create, view, update, activate, deactivate, and delete product FAQs")
 public class ProductFaqController {
     private final ProductFaqService productFaqService;
 
+    @Operation(summary = "Create product FAQ", description = "Creates a new FAQ for the specified product.")
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<ProductFaqResponse>> createFaq(
             @PathVariable UUID productId,
@@ -37,6 +41,7 @@ public class ProductFaqController {
         );
     }
 
+    @Operation(summary = "Get all product FAQs", description = "Retrieves all FAQs associated with the specified product.")
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<List<ProductFaqResponse>>> getAllFaqs(
             @PathVariable UUID productId, HttpServletRequest request) {
@@ -49,6 +54,7 @@ public class ProductFaqController {
         );
     }
 
+    @Operation(summary = "Get product FAQ by ID", description = "Retrieves a specific FAQ belonging to the specified product.")
     @GetMapping("/{faqId}")
     public ResponseEntity<ApiSuccessResponse<ProductFaqResponse>> getFaqById(
             @PathVariable UUID productId, @PathVariable UUID faqId,
@@ -63,6 +69,7 @@ public class ProductFaqController {
         );
     }
 
+    @Operation(summary = "Update product FAQ", description = "Updates the question and answer of an existing product FAQ.")
     @PutMapping("/{faqId}")
     public ResponseEntity<ApiSuccessResponse<ProductFaqResponse>> updateFaq(
             @PathVariable UUID productId,
@@ -79,6 +86,7 @@ public class ProductFaqController {
         );
     }
 
+    @Operation(summary = "Update product FAQ status", description = "Activates or deactivates a product FAQ.")
     @PatchMapping("/{faqId}/status")
     public ResponseEntity<ApiSuccessResponse<ProductFaqResponse>> updateFaqStatus(
             @PathVariable UUID productId,
@@ -96,6 +104,10 @@ public class ProductFaqController {
         );
     }
 
+    @Operation(
+            summary = "Delete product FAQ",
+            description = "Deletes an existing FAQ from the specified product."
+    )
     @DeleteMapping("/{faqId}")
     public ResponseEntity<ApiSuccessResponse<Void>> deleteFaq(@PathVariable UUID productId, @PathVariable UUID faqId, HttpServletRequest request) {
         productFaqService.delete(productId, faqId);
