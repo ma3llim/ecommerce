@@ -66,14 +66,14 @@ public class ProductService {
 
     public ProductResponse createProduct(AddProductRequest productRequest) {
         Category category = categoryRepository.findById(productRequest.categoryId()).orElseThrow(() -> {
-            log.warn("Create product failed request: category not found categoryId:{}", productRequest.categoryId());
+            log.warn("Create product request failed: category not found, categoryId={}", productRequest.categoryId());
             return new ResourceNotFoundException("Category not found");
         });
 
         String productSlug = SlugUtils.generateSlug(productRequest.name());
         if (productRepository.existsBySlug(productSlug)) {
             log.warn("Create product request rejected: product slug already exists, slug={}", productSlug);
-            throw new ResourceAlreadyExistsException("Product Slug is already existed");
+            throw new ResourceAlreadyExistsException("Product slug already exists");
         }
 
         Product newProduct = Product.builder()
@@ -85,39 +85,47 @@ public class ProductService {
                 .published(false)
                 .build();
 
+        Product savedProduct = productRepository.save(newProduct);
 
-        productRepository.save(newProduct);
+        log.info("Product created successfully, productId={}, categoryId={}, slug={}",
+                savedProduct.getId(), savedProduct.getCategoryId(), savedProduct.getSlug());
 
-        return objectMapper.convertValue(newProduct, ProductResponse.class);
+        return objectMapper.convertValue(savedProduct, ProductResponse.class);
     }
 
     public ProductDetailsResponse getProduct(UUID productId) {
-        Product product = productRepository.findById(productId).orElseThrow(() ->
-                new ResourceNotFoundException("Product not found")
-        );
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Get product details request failed: product not found, productId={}", productId);
+            return new ResourceNotFoundException("Product not found");
+        });
 
-        Category category = categoryRepository.findById(product.getCategoryId()).orElseThrow(() ->
-                new ResourceNotFoundException("Category not found")
-        );
+        Category category = categoryRepository.findById(product.getCategoryId()).orElseThrow(() -> {
+            log.warn("Get product details request failed: category not found, productId={}, categoryId={}",
+                    productId, product.getCategoryId());
+            return new ResourceNotFoundException("Category not found");
+        });
 
         List<ProductVariant> variants = productVariantRepository.findAllByProductId(productId);
 
         List<UUID> variantIds = variants.stream().map(ProductVariant::getId).toList();
 
-        List<ProductVariantImage> variantImages = variantIds.isEmpty() ? List.of() : productVariantImageRepository.findAllByProductVariantIdIn(variantIds);
+        List<ProductVariantImage> variantImages = variantIds.isEmpty() ? List.of() :
+                productVariantImageRepository.findAllByProductVariantIdIn(variantIds);
 
         Map<UUID, List<ProductVariantImage>> imagesByVariantId = variantImages.stream()
                 .collect(Collectors.groupingBy(ProductVariantImage::getProductVariantId));
 
         List<ProductVariantResponse> variantResponses = variants.stream()
                 .map(productVariant -> {
-                    List<ProductVariantImageResponse> imageResponses = imagesByVariantId.getOrDefault(productVariant.getId(), List.of())
-                            .stream().map(image -> new ProductVariantImageResponse(
+                    List<ProductVariantImageResponse> imageResponses = imagesByVariantId
+                            .getOrDefault(productVariant.getId(), List.of())
+                            .stream()
+                            .map(image -> new ProductVariantImageResponse(
                                     image.getId(),
                                     image.getImageUrl(),
                                     image.getDisplayOrder(),
-                                    image.isPrimary()
-                            )).toList();
+                                    image.isPrimary())
+                            ).toList();
 
                     return new ProductVariantResponse(
                             productVariant.getId(),
@@ -150,7 +158,6 @@ public class ProductService {
 
     @Transactional
     public ProductVariantResponse addProductVariant(UUID productId, AddProductVariants addProductVariants) {
-        // remove this after frontend send valid data
         Map<String, Object> attributes;
         try {
             attributes = objectMapper.readValue(
@@ -159,22 +166,28 @@ public class ProductService {
                     }
             );
         } catch (JsonProcessingException exception) {
-            throw new BadRequestException("Invalid Attributes JSON");
+            log.warn("Add product variant request rejected: invalid attributes JSON, productId={}", productId);
+            throw new BadRequestException("Invalid variant attributes");
         }
-        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
-            log.warn("not found");
+
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Add product variant request failed: product not found, productId={}", productId);
             return new ResourceNotFoundException("Product not found");
         });
-        String variantValue = attributes.values().stream().map(Objects::toString).collect(Collectors.joining("-"));
-        String variantsSku = SkuUtils.generateSku(productExisted.getName(), variantValue);
 
-        if (productVariantRepository.existsBySku(variantsSku)) {
+        String variantValue = attributes.values().stream().map(Objects::toString)
+                .collect(Collectors.joining("-"));
+        String variantSku = SkuUtils.generateSku(product.getName(), variantValue);
+
+        if (productVariantRepository.existsBySku(variantSku)) {
+            log.warn("Add product variant request rejected: SKU already exists, productId={}, sku={}",
+                    productId, variantSku);
             throw new ResourceAlreadyExistsException("SKU already exists");
         }
 
         ProductVariant variant = ProductVariant.builder()
-                .productId(productExisted.getId())
-                .sku(variantsSku)
+                .productId(product.getId())
+                .sku(variantSku)
                 .price(addProductVariants.price())
                 .stockQuantity(addProductVariants.stockQuantity())
                 .attributes(attributes)
@@ -182,40 +195,69 @@ public class ProductService {
 
         ProductVariant savedVariant = productVariantRepository.save(variant);
 
-        List<ProductVariantImage> productVariantImages = List.of();
-        if (addProductVariants.images() != null && !addProductVariants.images().isEmpty()) {
-            productVariantImages = uploadAndCreateImageRecords(savedVariant.getId(), addProductVariants.images());
-            productVariantImageRepository.saveAll(productVariantImages);
-            if (productExisted.getDefaultVariantId() == null) {
-                productExisted.setDefaultVariantId(savedVariant.getId());
-            }
+        List<ProductVariantImage> variantImages = List.of();
 
+        if (addProductVariants.images() != null && !addProductVariants.images().isEmpty()) {
+            variantImages = uploadAndCreateImageRecords(savedVariant.getId(), addProductVariants.images());
+
+            productVariantImageRepository.saveAll(variantImages);
+
+            if (product.getDefaultVariantId() == null) {
+                product.setDefaultVariantId(savedVariant.getId());
+                productRepository.save(product);
+                log.info("Default variant assigned to product, productId={}, variantId={}",
+                        productId, savedVariant.getId());
+            }
         }
-        List<ProductVariantImageResponse> imageResponses = productVariantImages.stream()
+
+        List<ProductVariantImageResponse> imageResponses = variantImages.stream()
                 .map(image -> objectMapper.convertValue(image, ProductVariantImageResponse.class))
                 .toList();
 
-        return new ProductVariantResponse(savedVariant.getId(), savedVariant.getSku(),
-                savedVariant.getPrice(), savedVariant.getStockQuantity(),
-                savedVariant.getAttributes(), savedVariant.isActive(), imageResponses);
+        log.info("Product variant created successfully, productId={}, variantId={}, sku={}, imageCount={}",
+                productId, savedVariant.getId(), savedVariant.getSku(), variantImages.size());
+
+        return new ProductVariantResponse(
+                savedVariant.getId(),
+                savedVariant.getSku(),
+                savedVariant.getPrice(),
+                savedVariant.getStockQuantity(),
+                savedVariant.getAttributes(),
+                savedVariant.isActive(),
+                imageResponses
+        );
     }
 
     public ProductResponse updateProductStatus(UUID productId, VisibleStatus status) {
-        Product product = productRepository.findById(productId).orElseThrow(() ->
-                new ResourceNotFoundException("Product not found")
-        );
-        product.setPublished(status == VisibleStatus.ACTIVE);
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Update product status request failed: product not found, productId={}, status={}",
+                    productId, status);
+            return new ResourceNotFoundException("Product not found");
+        });
+
+        boolean published = status == VisibleStatus.ACTIVE;
+
+        if (product.isPublished() == published) {
+            log.info("Update product status skipped: status is already {}, productId={}", status, productId);
+
+            return objectMapper.convertValue(product, ProductResponse.class);
+        }
+
+        product.setPublished(published);
         Product savedProduct = productRepository.save(product);
+
+        log.info("Product status updated successfully, productId={}, status={}", productId, status);
         return objectMapper.convertValue(savedProduct, ProductResponse.class);
     }
 
     private List<ProductVariantImage> uploadAndCreateImageRecords(UUID productVariantId, List<MultipartFile> images) {
-        List<ProductVariantImage> imagesRecords = new ArrayList<>();
+        List<ProductVariantImage> imageRecords = new ArrayList<>();
+
         for (int index = 0; index < images.size(); index++) {
             MultipartFile image = images.get(index);
-            CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(image, CloudinaryFolder.PRODUCT_IMAGES);
 
-            ProductVariantImage productVariantImage = ProductVariantImage.builder()
+            CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(image, CloudinaryFolder.PRODUCT_IMAGES);
+            ProductVariantImage imageRecord = ProductVariantImage.builder()
                     .productVariantId(productVariantId)
                     .imageUrl(uploadResult.secureUrl())
                     .imagePublicId(uploadResult.publicId())
@@ -223,86 +265,140 @@ public class ProductService {
                     .primary(index == 0)
                     .build();
 
-            imagesRecords.add(productVariantImage);
+            imageRecords.add(imageRecord);
         }
 
-        return imagesRecords;
+        return imageRecords;
     }
 
-    public ProductResponse updateProduct(UUID productId, @Valid UpdateProduct productRequest) {
-        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
-            log.warn("Product not found: {}", productId);
+    public ProductResponse updateProduct(UUID productId, UpdateProduct productRequest) {
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Update product request failed: product not found, productId={}", productId);
             return new ResourceNotFoundException("Product not found");
         });
 
-        if (productRequest.categoryId() != null) productExisted.setCategoryId(productRequest.categoryId());
+        if (productRequest.categoryId() != null && !productRequest.categoryId().equals(product.getCategoryId())) {
+            categoryRepository.findById(productRequest.categoryId()).orElseThrow(() -> {
+                log.warn("Update product request failed: category not found, productId={}, categoryId={}",
+                        productId, productRequest.categoryId());
+                return new ResourceNotFoundException("Category not found");
+            });
+
+            product.setCategoryId(productRequest.categoryId());
+        }
+
         if (productRequest.name() != null) {
             String productSlug = SlugUtils.generateSlug(productRequest.name());
 
             if (productRepository.existsBySlugAndIdNot(productSlug, productId)) {
-                throw new ResourceAlreadyExistsException("Product with this name already exists");
+                log.warn("Update product request rejected: product slug already exists, productId={}, slug={}",
+                        productId, productSlug);
+                throw new ResourceAlreadyExistsException("Product slug already exists");
             }
 
-            productExisted.setName(productRequest.name());
-            productExisted.setSlug(productSlug);
+            product.setName(productRequest.name());
+            product.setSlug(productSlug);
         }
-        if (productRequest.description() != null) productExisted.setDescription(productRequest.description());
-        if (productRequest.specifications() != null) productExisted.setSpecifications(productRequest.specifications());
 
-        productRepository.save(productExisted);
+        if (productRequest.description() != null) {
+            product.setDescription(productRequest.description());
+        }
 
-        return objectMapper.convertValue(productExisted, ProductResponse.class);
+        if (productRequest.specifications() != null) {
+            product.setSpecifications(productRequest.specifications());
+        }
+
+        Product savedProduct = productRepository.save(product);
+
+        log.info("Product updated successfully, productId={}, categoryId={}, slug={}",
+                savedProduct.getId(), savedProduct.getCategoryId(), savedProduct.getSlug());
+        return objectMapper.convertValue(savedProduct, ProductResponse.class);
     }
 
-    public ProductVariantResponse updateProductVariant(UUID productId, UUID variantId, @Valid UpdateProductVariant productVariant) {
-        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
-            log.warn("Product not found: {}", productId);
+    public ProductVariantResponse updateProductVariant(UUID productId, UUID variantId, UpdateProductVariant productVariant) {
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Update product variant failed: product not found, productId={}, variantId={}",
+                    productId, variantId);
             return new ResourceNotFoundException("Product not found");
         });
-        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
-            log.warn("Variant not found: {}", variantId);
-            return new ResourceNotFoundException("Variant not found");
+
+        ProductVariant existingVariant = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Update product variant failed: variant not found, productId={}, variantId={}",
+                    productId, variantId);
+            return new ResourceNotFoundException("Product variant not found");
         });
 
-        if (productVariant.price() != null) productVariantExisted.setPrice(productVariant.price());
-        if (productVariant.stockQuantity() != null)
-            productVariantExisted.setStockQuantity(productVariant.stockQuantity());
-        if (productVariant.attributes() != null) productVariantExisted.setAttributes(productVariant.attributes());
+        if (!existingVariant.getProductId().equals(product.getId())) {
+            log.warn("Update product variant rejected: variant does not belong to product, productId={}, variantId={}",
+                    productId, variantId);
+            throw new ResourceNotFoundException("Product variant not found");
+        }
 
-        productVariantRepository.save(productVariantExisted);
+        if (productVariant.price() != null) {
+            existingVariant.setPrice(productVariant.price());
+        }
 
-        return objectMapper.convertValue(productVariantExisted, ProductVariantResponse.class);
+        if (productVariant.stockQuantity() != null) {
+            existingVariant.setStockQuantity(productVariant.stockQuantity());
+        }
+
+        if (productVariant.attributes() != null) {
+            existingVariant.setAttributes(productVariant.attributes());
+        }
+
+        ProductVariant savedVariant = productVariantRepository.save(existingVariant);
+
+        log.info("Product variant updated successfully, productId={}, variantId={}, sku={}", productId, variantId, savedVariant.getSku());
+
+        return objectMapper.convertValue(savedVariant, ProductVariantResponse.class);
     }
 
     public List<ProductVariantImageResponse> uploadsImage(UUID productId, UUID variantId, @Valid AddImages images) {
-        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
-            log.warn("Product not found. productId={}", productId);
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Upload product variant images failed: product not found, productId={}, variantId={}", productId, variantId);
             return new ResourceNotFoundException("Product not found");
         });
-        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
-            log.warn("Variant not found. variantId={}", variantId);
-            return new ResourceNotFoundException("Variant not found");
+
+        ProductVariant variant = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Upload product variant images failed: variant not found, productId={}, variantId={}", productId, variantId);
+            return new ResourceNotFoundException("Product variant not found");
         });
 
+        if (!variant.getProductId().equals(product.getId())) {
+            log.warn("Upload product variant images rejected: variant does not belong to product, productId={}, " +
+                    "variantId={}", productId, variantId);
+            throw new ResourceNotFoundException("Product variant not found");
+        }
+
         int existingImageCount = productVariantImageRepository.countByProductVariantId(variantId);
-        log.debug("Existing variant image count. variantId={}, existingImageCount={}", variantId, existingImageCount);
 
+        log.debug("Existing product variant image count, productId={}, variantId={}, existingImageCount={}",
+                productId, variantId, existingImageCount);
 
-        if (existingImageCount > AppConstants.MAX_FILE_UPLOAD) {
-            log.warn("Maximum image limit reached. variantId={}, existingImageCount={}, maxAllowed={}", variantId, existingImageCount, AppConstants.MAX_FILE_UPLOAD);
-            throw new ResourceAlreadyExistsException("Maximum 5 image allowed");
-        }
-        int totalImage = existingImageCount + images.images().size();
-        log.info(String.valueOf(totalImage));
-        if (totalImage > AppConstants.MAX_FILE_UPLOAD) {
-            log.warn("Image upload rejected. variantId={}, existingImageCount={}, requestedImageCount={}, totalImageCount={}, maxAllowed={}", variantId, existingImageCount, images.images().size(), totalImage, AppConstants.MAX_FILE_UPLOAD);
-            throw new ResourceAlreadyExistsException("Maximum 5 images allowed");
+        if (existingImageCount >= AppConstants.MAX_FILE_UPLOAD) {
+            log.warn("Image upload rejected: maximum image limit reached, productId={}, " +
+                            "variantId={}, existingImageCount={}, maxAllowed={}",
+                    productId, variantId, existingImageCount, AppConstants.MAX_FILE_UPLOAD);
+            throw new BadRequestException("A product variant can have a maximum of " + AppConstants.MAX_FILE_UPLOAD + " images");
         }
 
-        List<ProductVariantImage> productVariantImages = new ArrayList<>();
+        int requestedImageCount = images.images().size();
+        int totalImageCount = existingImageCount + requestedImageCount;
+
+        if (totalImageCount > AppConstants.MAX_FILE_UPLOAD) {
+            log.warn("Image upload rejected: maximum image limit exceeded, productId={}, variantId={}, " +
+                            "existingImageCount={}, requestedImageCount={}, totalImageCount={}, maxAllowed={}",
+                    productId, variantId, existingImageCount, requestedImageCount, totalImageCount,
+                    AppConstants.MAX_FILE_UPLOAD);
+            throw new BadRequestException("You can upload a maximum of " + AppConstants.MAX_FILE_UPLOAD + " images per product variant");
+        }
+
+        List<ProductVariantImage> imageRecords = new ArrayList<>();
+
         for (int i = 0; i < images.images().size(); i++) {
             MultipartFile image = images.images().get(i);
             CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(image, CloudinaryFolder.PRODUCT_IMAGES);
+
             int displayOrder = existingImageCount + i + 1;
             boolean primary = existingImageCount == 0 && i == 0;
 
@@ -314,150 +410,223 @@ public class ProductService {
                     .primary(primary)
                     .build();
 
-            productVariantImages.add(imageRecord);
+            imageRecords.add(imageRecord);
         }
 
-        productVariantImageRepository.saveAll(productVariantImages);
+        productVariantImageRepository.saveAll(imageRecords);
+        log.info("Product variant images uploaded successfully, productId={}, variantId={}, uploadedCount={}, " +
+                        "previousImageCount={}, totalImageCount={}", productId, variantId, requestedImageCount,
+                existingImageCount, totalImageCount);
 
-        return objectMapper.convertValue(
-                productVariantImages,
-                new TypeReference<List<ProductVariantImageResponse>>() {
-                });
+        return objectMapper.convertValue(imageRecords, new TypeReference<List<ProductVariantImageResponse>>() {
+        });
     }
 
     public ProductVariantImageResponse replaceImage(UUID productId, UUID variantId, UUID variantImageId, ReplaceImage image) {
-        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
-            log.warn("Product not found. productId={}", productId);
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Replace product variant image failed: product not found, productId={}, variantId={}," +
+                    " variantImageId={}", productId, variantId, variantImageId);
             return new ResourceNotFoundException("Product not found");
         });
-        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
-            log.warn("Variant not found. variantId={}", variantId);
-            return new ResourceNotFoundException("Variant not found");
+
+        ProductVariant variant = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Replace product variant image failed: variant not found, productId={}, variantId={}," +
+                    " variantImageId={}", productId, variantId, variantImageId);
+            return new ResourceNotFoundException("Product variant not found");
         });
 
-        ProductVariantImage productVariantImage = productVariantImageRepository.findById(variantImageId).orElseThrow(() -> {
-            log.warn("Variant image not found. variantImageId={}", variantImageId);
-            return new ResourceNotFoundException("variantImageId not found");
+        if (!variant.getProductId().equals(product.getId())) {
+            log.warn("Replace product variant image rejected: variant does not belong to product, productId={}, " +
+                    "variantId={}, variantImageId={}", productId, variantId, variantImageId);
+            throw new ResourceNotFoundException("Product variant not found");
+        }
+
+        ProductVariantImage existingImage = productVariantImageRepository.findById(variantImageId).orElseThrow(() -> {
+            log.warn("Replace product variant image failed: image not found, productId={}, variantId={}," +
+                    " variantImageId={}", productId, variantId, variantImageId);
+            return new ResourceNotFoundException("Product variant image not found");
         });
 
-        String oldPublicId = productVariantImage.getImagePublicId();
+        if (!existingImage.getProductVariantId().equals(variant.getId())) {
+            log.warn("Replace product variant image rejected: image does not belong to variant, productId={}, " +
+                    "variantId={}, variantImageId={}", productId, variantId, variantImageId);
+            throw new ResourceNotFoundException("Product variant image not found");
+        }
+
+        String oldPublicId = existingImage.getImagePublicId();
 
         CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(image.image(), CloudinaryFolder.PRODUCT_IMAGES);
 
-        productVariantImage.setImageUrl(uploadResult.secureUrl());
-        productVariantImage.setImagePublicId(uploadResult.publicId());
+        existingImage.setImageUrl(uploadResult.secureUrl());
+        existingImage.setImagePublicId(uploadResult.publicId());
 
-        productVariantImageRepository.save(productVariantImage);
-        if (oldPublicId != null && !oldPublicId.isEmpty()) {
+        ProductVariantImage savedImage = productVariantImageRepository.save(existingImage);
+
+        if (oldPublicId != null && !oldPublicId.isBlank()) {
             cloudinaryService.removeImage(oldPublicId);
         }
 
-        return objectMapper.convertValue(productVariantImage, ProductVariantImageResponse.class);
+        log.info("Product variant image replaced successfully, productId={}, variantId={}, variantImageId={}",
+                productId, variantId, variantImageId);
+        return objectMapper.convertValue(savedImage, ProductVariantImageResponse.class);
     }
 
+    @Transactional
     public ProductVariantImageResponse setVariantImagePrimary(UUID productId, UUID variantId, UUID variantImageId) {
-        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
-            log.warn("Product not found. productId={}", productId);
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Set variant image primary failed: product not found, productId={}, variantId={}, " +
+                    "variantImageId={}", productId, variantId, variantImageId);
             return new ResourceNotFoundException("Product not found");
         });
-        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
-            log.warn("Variant not found. variantId={}", variantId);
-            return new ResourceNotFoundException("Variant not found");
+
+        ProductVariant variant = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Set variant image primary failed: variant not found, productId={}, variantId={}, " +
+                    "variantImageId={}", productId, variantId, variantImageId);
+            return new ResourceNotFoundException("Product variant not found");
         });
 
-        ProductVariantImage productVariantImage = productVariantImageRepository.findById(variantImageId).orElseThrow(() -> {
-            log.warn("Variant image not found. variantImageId={}", variantImageId);
-            return new ResourceNotFoundException("variantImageId not found");
+        if (!variant.getProductId().equals(product.getId())) {
+            log.warn("Set variant image primary rejected: variant does not belong to product, productId={}, " +
+                    "variantId={}, variantImageId={}", productId, variantId, variantImageId);
+            throw new ResourceNotFoundException("Product variant not found");
+        }
+
+        ProductVariantImage image = productVariantImageRepository.findById(variantImageId).orElseThrow(() -> {
+            log.warn("Set variant image primary failed: image not found, productId={}, variantId={}, " +
+                    "variantImageId={}", productId, variantId, variantImageId);
+            return new ResourceNotFoundException("Product variant image not found");
         });
+
+        if (!image.getProductVariantId().equals(variant.getId())) {
+            log.warn("Set variant image primary rejected: image does not belong to variant, productId={}, " +
+                    "variantId={}, variantImageId={}", productId, variantId, variantImageId);
+            throw new ResourceNotFoundException("Product variant image not found");
+        }
+
+        if (image.isPrimary()) {
+            log.debug("Set variant image primary skipped: image is already primary, productId={}, " +
+                    "variantId={}, variantImageId={}", productId, variantId, variantImageId);
+            return objectMapper.convertValue(image, ProductVariantImageResponse.class);
+        }
 
         productVariantImageRepository.findByProductVariantIdAndPrimaryTrue(variantId)
-                .ifPresent(currentPrimary -> currentPrimary.setPrimary(false));
+                .ifPresent(currentPrimary ->
+                        currentPrimary.setPrimary(false)
+                );
 
-        productVariantImage.setPrimary(true);
+        image.setPrimary(true);
 
-        productVariantImageRepository.save(productVariantImage);
-
-        return objectMapper.convertValue(productVariantImage, ProductVariantImageResponse.class);
+        ProductVariantImage savedImage = productVariantImageRepository.save(image);
+        log.info("Product variant image set as primary successfully, productId={}, " +
+                "variantId={}, variantImageId={}", productId, variantId, variantImageId);
+        return objectMapper.convertValue(savedImage, ProductVariantImageResponse.class);
     }
 
+    @Transactional
     public List<ProductVariantImageResponse> reorderImages(UUID productId, UUID variantId, ReorderImages reorderImages) {
-        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
-            log.warn("Product not found. productId={}", productId);
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Reorder variant images failed: product not found, productId={}, variantId={}",
+                    productId, variantId);
             return new ResourceNotFoundException("Product not found");
         });
-        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
-            log.warn("Variant not found. variantId={}", variantId);
-            return new ResourceNotFoundException("Variant not found");
-        });
 
-        List<ProductVariantImage> existingImages = productVariantImageRepository.findAllByProductVariantId(productVariantExisted.getId());
+        ProductVariant variant =
+                productVariantRepository.findById(variantId).orElseThrow(() -> {
+                    log.warn("Reorder variant images failed: variant not found, productId={}, variantId={}",
+                            productId, variantId);
+                    return new ResourceNotFoundException("Product variant not found");
+                });
+
+        if (!variant.getProductId().equals(product.getId())) {
+            log.warn("Reorder variant images rejected: variant does not belong to product, productId={}, variantId={}",
+                    productId, variantId);
+            throw new ResourceNotFoundException("Product variant not found");
+        }
+
+        List<ProductVariantImage> existingImages = productVariantImageRepository.findAllByProductVariantId(variantId);
 
         List<UUID> requestedIds = reorderImages.imageIds();
-        // Check duplicate IDs
         Set<UUID> uniqueIds = new HashSet<>(requestedIds);
 
         if (uniqueIds.size() != requestedIds.size()) {
+            log.warn("Reorder variant images rejected: duplicate image IDs, productId={}, variantId={}", productId, variantId);
             throw new BadRequestException("Duplicate image IDs are not allowed");
         }
-        // Get IDs that actually exist in DB
+
         Set<UUID> existingIds = existingImages.stream().map(ProductVariantImage::getId).collect(Collectors.toSet());
         if (!existingIds.containsAll(requestedIds)) {
-            throw new BadRequestException("One or more image IDs do not belong to this variant");
+            log.warn("Reorder variant images rejected: image does not belong to variant, productId={}, " +
+                    "variantId={}", productId, variantId);
+            throw new BadRequestException("One or more image IDs do not belong to this product variant");
         }
 
-        // Check missing image IDs
         if (requestedIds.size() != existingIds.size()) {
-            throw new BadRequestException("All variant images must be included when reordering");
+            log.warn("Reorder variant images rejected: incomplete image ID list, productId={}," +
+                            " variantId={}, requestedCount={}, existingCount={}",
+                    productId, variantId, requestedIds.size(), existingIds.size());
+            throw new BadRequestException("All product variant images must be included when reordering");
         }
 
-        Map<UUID, ProductVariantImage> imageMap = existingImages.stream().collect(Collectors.toMap(ProductVariantImage::getId, image -> image));
-        // assign new display order
+        Map<UUID, ProductVariantImage> imageMap = existingImages.stream().collect(Collectors.toMap(
+                ProductVariantImage::getId,
+                image -> image
+        ));
+
         for (int i = 0; i < requestedIds.size(); i++) {
-            UUID imageId = requestedIds.get(i);
-            ProductVariantImage image = imageMap.get(imageId);
+            ProductVariantImage image = imageMap.get(requestedIds.get(i));
             image.setDisplayOrder(i + 1);
         }
+
         List<ProductVariantImage> savedImages = productVariantImageRepository.saveAll(existingImages);
-        return objectMapper.convertValue(
-                savedImages,
-                new TypeReference<List<ProductVariantImageResponse>>() {
+
+        log.info("Product variant images reordered successfully, productId={}, variantId={}, imageCount={}",
+                productId, variantId, savedImages.size());
+
+        return objectMapper.convertValue(savedImages, new TypeReference<List<ProductVariantImageResponse>>() {
                 }
         );
     }
 
     @Transactional
     public void deleteVariantImage(UUID productId, UUID variantId, UUID imageVariantId) {
-        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
-            log.warn("Product not found. productId={}", productId);
+
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Delete variant image failed: product not found, productId={}, variantId={}, imageId={}",
+                    productId, variantId, imageVariantId);
             return new ResourceNotFoundException("Product not found");
         });
 
-        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
-            log.warn("Variant not found. variantId={}", variantId);
-            return new ResourceNotFoundException("Variant not found");
+        ProductVariant variant = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Delete variant image failed: variant not found, productId={}, variantId={}, imageId={}",
+                    productId, variantId, imageVariantId);
+            return new ResourceNotFoundException("Product variant not found");
         });
 
-        if (!productVariantExisted.getProductId().equals(productExisted.getId())) {
-            throw new ResourceNotFoundException("Variant not found for this product");
+        if (!variant.getProductId().equals(product.getId())) {
+            log.warn("Delete variant image rejected: variant does not belong to product, productId={}, " +
+                    "variantId={}, imageId={}", productId, variantId, imageVariantId);
+            throw new ResourceNotFoundException("Product variant not found");
         }
 
-        ProductVariantImage productVariantImageExisted = productVariantImageRepository.findById(imageVariantId)
-                .orElseThrow(() -> {
-                    log.warn("Variant image not found. imageId={}, variantId={}", imageVariantId, variantId);
-                    return new ResourceNotFoundException("Variant image not found");
-                });
+        ProductVariantImage image = productVariantImageRepository.findById(imageVariantId).orElseThrow(() -> {
+            log.warn("Delete variant image failed: image not found, productId={}, variantId={}, imageId={}", productId, variantId, imageVariantId);
+            return new ResourceNotFoundException("Product variant image not found");
+        });
 
-        if (!productVariantImageExisted.getProductVariantId().equals(productVariantExisted.getId())) {
-            throw new ResourceNotFoundException("Variant Image is not found by product variant");
+        if (!image.getProductVariantId().equals(variant.getId())) {
+            log.warn("Delete variant image rejected: image does not belong to variant, productId={}, " +
+                    "variantId={}, imageId={}", productId, variantId, imageVariantId);
+            throw new ResourceNotFoundException("Product variant image not found");
         }
 
-        boolean deletedImageWasPrimary = productVariantImageExisted.isPrimary();
+        boolean deletedImageWasPrimary = image.isPrimary();
 
-        cloudinaryService.removeImage(productVariantImageExisted.getImagePublicId());
+        cloudinaryService.removeImage(image.getImagePublicId());
 
-        productVariantImageRepository.delete(productVariantImageExisted);
+        productVariantImageRepository.delete(image);
 
-        List<ProductVariantImage> remainingImages = productVariantImageRepository.findAllByProductVariantIdOrderByDisplayOrderAsc(variantId);
+        List<ProductVariantImage> remainingImages = productVariantImageRepository
+                .findAllByProductVariantIdOrderByDisplayOrderAsc(variantId);
 
         for (int i = 0; i < remainingImages.size(); i++) {
             ProductVariantImage remainingImage = remainingImages.get(i);
@@ -469,51 +638,83 @@ public class ProductService {
             }
         }
         productVariantImageRepository.saveAll(remainingImages);
+
+        log.info("Product variant image deleted successfully, productId={}, variantId={}, " +
+                        "imageId={}, wasPrimary={}, remainingImageCount={}", productId, variantId, imageVariantId,
+                deletedImageWasPrimary, remainingImages.size());
     }
 
     @Transactional
     public void deleteVariant(UUID productId, UUID variantId) {
-        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
-            log.warn("Product not found. productId={}", productId);
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Delete product variant failed: product not found, productId={}, variantId={}", productId, variantId);
             return new ResourceNotFoundException("Product not found");
         });
 
-        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
-            log.warn("Variant not found. variantId={}", variantId);
-            return new ResourceNotFoundException("Variant not found");
+        ProductVariant variant = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Delete product variant failed: variant not found, productId={}, variantId={}", productId, variantId);
+            return new ResourceNotFoundException("Product variant not found");
         });
 
-        if (!productVariantExisted.getProductId().equals(productExisted.getId())) {
-            throw new ResourceNotFoundException("Variant not found for this product");
+        if (!variant.getProductId().equals(product.getId())) {
+            log.warn("Delete product variant rejected: variant does not belong to product, productId={}, variantId={}",
+                    productId, variantId);
+            throw new ResourceNotFoundException("Product variant not found");
         }
 
-        List<ProductVariantImage> productVariantImages = productVariantImageRepository.findAllByProductVariantId(productVariantExisted.getId());
+        List<ProductVariantImage> variantImages = productVariantImageRepository.findAllByProductVariantId(variantId);
 
-        for (ProductVariantImage image : productVariantImages) {
+        for (ProductVariantImage image : variantImages) {
             cloudinaryService.removeImage(image.getImagePublicId());
         }
 
-        productVariantImageRepository.deleteAll(productVariantImages);
+        productVariantImageRepository.deleteAll(variantImages);
 
-        productVariantRepository.delete(productVariantExisted);
+        productVariantRepository.delete(variant);
+
+        if (product.getDefaultVariantId() != null && product.getDefaultVariantId().equals(variantId)) {
+            product.setDefaultVariantId(null);
+            productRepository.save(product);
+
+            log.info("Default variant cleared after variant deletion, productId={}, variantId={}", productId, variantId);
+        }
+        log.info("Product variant deleted successfully, productId={}, variantId={}, imageCount={}",
+                productId, variantId, variantImages.size());
     }
 
     public ProductVariantResponse updateVariantStatus(UUID productId, UUID variantId, VisibleStatus status) {
-        Product product = productRepository.findById(productId).orElseThrow(() ->
-                new ResourceNotFoundException("Product not found")
-        );
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Update variant status failed: product not found, productId={}, variantId={}, status={}",
+                    productId, variantId, status);
+            return new ResourceNotFoundException("Product not found");
+        });
 
-        ProductVariant variant = productVariantRepository.findById(variantId).orElseThrow(() ->
-                new ResourceNotFoundException("Variant not found")
-        );
+        ProductVariant variant = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Update variant status failed: variant not found, productId={}, variantId={}, status={}",
+                    productId, variantId, status);
+            return new ResourceNotFoundException("Product variant not found");
+        });
 
         if (!variant.getProductId().equals(product.getId())) {
-            throw new ResourceNotFoundException("Variant not found for this product");
+            log.warn("Update variant status rejected: variant does not belong to product, productId={}, " +
+                    "variantId={}, status={}", productId, variantId, status);
+            throw new ResourceNotFoundException("Product variant not found");
         }
-        variant.setActive(status == VisibleStatus.ACTIVE);
 
+        boolean active = status == VisibleStatus.ACTIVE;
+
+        if (variant.isActive() == active) {
+            log.debug("Update variant status skipped: status is already {}, productId={}, variantId={}",
+                    status, productId, variantId);
+            return objectMapper.convertValue(variant, ProductVariantResponse.class);
+        }
+
+        variant.setActive(active);
         ProductVariant savedVariant = productVariantRepository.save(variant);
 
+        log.info("Product variant status updated successfully, productId={}, variantId={}, status={}",
+                productId, variantId, status);
+        
         return objectMapper.convertValue(savedVariant, ProductVariantResponse.class);
     }
 }
