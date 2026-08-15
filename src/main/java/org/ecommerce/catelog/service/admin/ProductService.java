@@ -14,6 +14,7 @@ import org.ecommerce.catelog.entities.Category;
 import org.ecommerce.catelog.entities.Product;
 import org.ecommerce.catelog.entities.ProductVariant;
 import org.ecommerce.catelog.entities.ProductVariantImage;
+import org.ecommerce.catelog.enums.VariantStatus;
 import org.ecommerce.catelog.repository.CategoryRepository;
 import org.ecommerce.catelog.repository.ProductRepository;
 import org.ecommerce.catelog.repository.ProductVariantImageRepository;
@@ -384,5 +385,51 @@ public class ProductService {
             }
         }
         productVariantImageRepository.saveAll(remainingImages);
+    }
+
+    @Transactional
+    public void deleteVariant(UUID productId, UUID variantId) {
+        Product productExisted = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Product not found. productId={}", productId);
+            return new ResourceNotFoundException("Product not found");
+        });
+
+        ProductVariant productVariantExisted = productVariantRepository.findById(variantId).orElseThrow(() -> {
+            log.warn("Variant not found. variantId={}", variantId);
+            return new ResourceNotFoundException("Variant not found");
+        });
+
+        if (!productVariantExisted.getProductId().equals(productExisted.getId())) {
+            throw new ResourceNotFoundException("Variant not found for this product");
+        }
+
+        List<ProductVariantImage> productVariantImages = productVariantImageRepository.findAllByProductVariantId(productVariantExisted.getId());
+
+        for (ProductVariantImage image : productVariantImages) {
+            cloudinaryService.removeImage(image.getImagePublicId());
+        }
+
+        productVariantImageRepository.deleteAll(productVariantImages);
+
+        productVariantRepository.delete(productVariantExisted);
+    }
+
+    public ProductVariantResponse updateVariantStatus(UUID productId, UUID variantId, VariantStatus status) {
+        Product product = productRepository.findById(productId).orElseThrow(() ->
+                new ResourceNotFoundException("Product not found")
+        );
+
+        ProductVariant variant = productVariantRepository.findById(variantId).orElseThrow(() ->
+                new ResourceNotFoundException("Variant not found")
+        );
+
+        if (!variant.getProductId().equals(product.getId())) {
+            throw new ResourceNotFoundException("Variant not found for this product");
+        }
+        variant.setActive(status == VariantStatus.ACTIVE);
+
+        ProductVariant savedVariant = productVariantRepository.save(variant);
+
+        return objectMapper.convertValue(savedVariant, ProductVariantResponse.class);
     }
 }

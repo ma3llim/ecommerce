@@ -89,6 +89,34 @@ public class ProductsController {
         );
     }
 
+    @DeleteMapping("/{productId}/variants/{variantId}")
+    public ResponseEntity<ApiSuccessResponse<Void>> deleteVariants(
+            @PathVariable UUID productId, @PathVariable UUID variantId,
+            HttpServletRequest request
+    ) {
+        productService.deleteVariant(productId, variantId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
+                ApiSuccessResponse.<Void>builder().success(true)
+                        .message("Product variant delete successfully")
+                        .data(null).path(request.getRequestURI()).build()
+        );
+    }
+
+    @PutMapping("/{productId}/variants/{variantId}/status")
+    public ResponseEntity<ApiSuccessResponse<ProductVariantResponse>> updateVariantStatus(
+            @PathVariable UUID productId, @PathVariable UUID variantId,
+            @Valid @RequestBody UpdateVariantStatus requestData,
+            HttpServletRequest request
+    ) {
+        ProductVariantResponse productVariantResponse = productService.updateVariantStatus(productId, variantId, requestData.status());
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ApiSuccessResponse.<ProductVariantResponse>builder().success(true)
+                        .message("Product variant status updated successfully")
+                        .data(productVariantResponse).path(request.getRequestURI()).build()
+        );
+    }
+
     @PostMapping("/{productId}/variants/{variantId}/images")
     public ResponseEntity<ApiSuccessResponse<List<ProductVariantImageResponse>>> uploadsImages(
             @PathVariable UUID productId, @PathVariable UUID variantId,
