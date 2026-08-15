@@ -7,9 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.catelog.dtos.admin.request.*;
-import org.ecommerce.catelog.dtos.admin.response.ProductResponse;
-import org.ecommerce.catelog.dtos.admin.response.ProductVariantImageResponse;
-import org.ecommerce.catelog.dtos.admin.response.ProductVariantResponse;
+import org.ecommerce.catelog.dtos.admin.response.*;
 import org.ecommerce.catelog.entities.Category;
 import org.ecommerce.catelog.entities.Product;
 import org.ecommerce.catelog.entities.ProductVariant;
@@ -93,8 +91,61 @@ public class ProductService {
         return objectMapper.convertValue(newProduct, ProductResponse.class);
     }
 
-    public static void getProduct(UUID productId) {
+    public ProductDetailsResponse getProduct(UUID productId) {
+        Product product = productRepository.findById(productId).orElseThrow(() ->
+                new ResourceNotFoundException("Product not found")
+        );
 
+        Category category = categoryRepository.findById(product.getCategoryId()).orElseThrow(() ->
+                new ResourceNotFoundException("Category not found")
+        );
+
+        List<ProductVariant> variants = productVariantRepository.findAllByProductId(productId);
+
+        List<UUID> variantIds = variants.stream().map(ProductVariant::getId).toList();
+
+        List<ProductVariantImage> variantImages = variantIds.isEmpty() ? List.of() : productVariantImageRepository.findAllByProductVariantIdIn(variantIds);
+
+        Map<UUID, List<ProductVariantImage>> imagesByVariantId = variantImages.stream()
+                .collect(Collectors.groupingBy(ProductVariantImage::getProductVariantId));
+
+        List<ProductVariantResponse> variantResponses = variants.stream()
+                .map(productVariant -> {
+                    List<ProductVariantImageResponse> imageResponses = imagesByVariantId.getOrDefault(productVariant.getId(), List.of())
+                            .stream().map(image -> new ProductVariantImageResponse(
+                                    image.getId(),
+                                    image.getImageUrl(),
+                                    image.getDisplayOrder(),
+                                    image.isPrimary()
+                            )).toList();
+
+                    return new ProductVariantResponse(
+                            productVariant.getId(),
+                            productVariant.getSku(),
+                            productVariant.getPrice(),
+                            productVariant.getStockQuantity(),
+                            productVariant.getAttributes(),
+                            productVariant.isActive(),
+                            imageResponses
+                    );
+                }).toList();
+
+        return new ProductDetailsResponse(
+                product.getId(),
+                new CategorySummaryResponse(
+                        category.getId(),
+                        category.getName()
+                ),
+                product.getName(),
+                product.getSlug(),
+                product.getDescription(),
+                product.getSpecifications(),
+                product.getDefaultVariantId(),
+                product.isPublished(),
+                variantResponses,
+                product.getCreatedAt(),
+                product.getUpdatedAt()
+        );
     }
 
     @Transactional

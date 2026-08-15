@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.catelog.dtos.admin.request.*;
+import org.ecommerce.catelog.dtos.admin.response.ProductDetailsResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantImageResponse;
 import org.ecommerce.catelog.dtos.admin.response.ProductVariantResponse;
@@ -39,6 +40,21 @@ public class ProductsController {
                         .success(true)
                         .message("fetch products")
                         .data(products)
+                        .path(request.getRequestURI())
+                        .build()
+        );
+    }
+
+    @GetMapping("/{productId}")
+    public ResponseEntity<ApiSuccessResponse<ProductDetailsResponse>> getProduct(
+            @PathVariable UUID productId, HttpServletRequest request) {
+        ProductDetailsResponse productDetailsResponse = productService.getProduct(productId);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<ProductDetailsResponse>builder()
+                        .success(true)
+                        .message("Product fetched successfully")
+                        .data(productDetailsResponse)
                         .path(request.getRequestURI())
                         .build()
         );
