@@ -1,5 +1,8 @@
 package org.ecommerce.catelog.controller.admin;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +25,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/admin/tags")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Admin - Tag Management", description = "APIs for administrators to create, retrieve, update, and delete product tags")
 public class TagController {
     private final TagService tagService;
 
+    @Operation(summary = "Create a product tag", description = "Creates a new tag that can be assigned to products.")
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<TagResponse>> createTag(
             @Valid @RequestBody TagRequest requestData, HttpServletRequest request) {
@@ -39,6 +45,7 @@ public class TagController {
         );
     }
 
+    @Operation(summary = "Get all product tags", description = "Retrieves a paginated list of product tags with optional search and sorting.")
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<PageResponse<TagResponse>>> getTags(
             @RequestParam(required = false) String search,
@@ -56,6 +63,7 @@ public class TagController {
         );
     }
 
+    @Operation(summary = "Update a product tag", description = "Updates the details of an existing product tag.")
     @PutMapping("/{tagId}")
     public ResponseEntity<ApiSuccessResponse<TagResponse>> updateTag(
             @PathVariable UUID tagId, @Valid @RequestBody TagRequest requestData, HttpServletRequest request) {
@@ -71,7 +79,7 @@ public class TagController {
         );
     }
 
-
+    @Operation(summary = "Delete a product tag", description = "Deletes an existing product tag.")
     @DeleteMapping("/{tagId}")
     public ResponseEntity<ApiSuccessResponse<Void>> deleteTag(
             @PathVariable UUID tagId, HttpServletRequest request) {

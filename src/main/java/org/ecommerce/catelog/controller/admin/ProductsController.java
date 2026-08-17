@@ -255,6 +255,7 @@ public class ProductsController {
         );
     }
 
+    @Operation(summary = "Assign a tag to a product", description = "Assigns an existing tag to an existing product. A product cannot have the same tag assigned more than once.")
     @PostMapping("/{productId}/tags/{tagId}")
     public ResponseEntity<ApiSuccessResponse<ProductTagMappingResponse>> addTagProduct(
             @PathVariable UUID productId, @PathVariable UUID tagId, HttpServletRequest request
@@ -270,6 +271,7 @@ public class ProductsController {
         );
     }
 
+    @Operation(summary = "Remove a tag from a product", description = "Removes an existing tag assignment from a product.")
     @DeleteMapping("/{productId}/tags/{tagId}")
     public ResponseEntity<ApiSuccessResponse<Void>> deleteTagProduct(
             @PathVariable UUID productId, @PathVariable UUID tagId, HttpServletRequest request
