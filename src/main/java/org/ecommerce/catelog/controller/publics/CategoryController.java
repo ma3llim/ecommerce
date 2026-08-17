@@ -1,5 +1,7 @@
 package org.ecommerce.catelog.controller.publics;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.catelog.dtos.admin.response.CategoryResponse;
@@ -16,9 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/categories")
+@Tag(name = "Category", description = "Public APIs for browsing product categories")
 public class CategoryController {
     private final CategoryService categoryService;
 
+    @Operation(summary = "Get all categories", description = "Retrieves a paginated list of active product categories.")
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<PageResponse<CategoryResponse>>> getAllCategories(
             Pageable pageable, HttpServletRequest request) {
@@ -34,6 +38,7 @@ public class CategoryController {
         );
     }
 
+    @Operation(summary = "Get category by slug", description = "Retrieves an active product category using its unique slug.")
     @GetMapping("/{slug}")
     public ResponseEntity<ApiSuccessResponse<CategoryResponse>> getCategoryBySlug(
             @PathVariable String slug, HttpServletRequest request) {
@@ -42,7 +47,7 @@ public class CategoryController {
         return ResponseEntity.ok(
                 ApiSuccessResponse.<CategoryResponse>builder()
                         .success(true)
-                        .message("Categories fetched successfully.")
+                        .message("Category fetched successfully.")
                         .data(data)
                         .path(request.getRequestURI())
                         .build()
