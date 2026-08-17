@@ -43,6 +43,14 @@ public class OpenApiConfig {
     }
 
     @Bean
+    public GroupedOpenApi catalogApi() {
+        return GroupedOpenApi.builder()
+                .group("catalog-apis")
+                .pathsToMatch("/api/v1/products/**", "/api/v1/categories/**")
+                .build();
+    }
+
+    @Bean
     public GroupedOpenApi adminApi() {
         return GroupedOpenApi.builder()
                 .group("admin-apis")

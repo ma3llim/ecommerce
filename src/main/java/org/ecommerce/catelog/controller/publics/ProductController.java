@@ -1,5 +1,7 @@
 package org.ecommerce.catelog.controller.publics;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.catelog.dtos.publics.ProductDetailsResponse;
@@ -16,9 +18,11 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/products")
+@Tag(name = "Public - Product", description = "Public APIs for browsing products and viewing product details")
 public class ProductController {
     private final ProductService productService;
 
+    @Operation(summary = "Get all products", description = "Retrieves a paginated list of published products. Products can optionally be filtered by category slug.")
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<PageResponse<ProductListResponse>>> allProducts(
             @RequestParam(value = "category", required = false) String category,
@@ -30,12 +34,13 @@ public class ProductController {
         return ResponseEntity.ok(
                 ApiSuccessResponse.<PageResponse<ProductListResponse>>builder()
                         .success(true)
-                        .message("Product fetch successfully")
+                        .message("Products fetched successfully\n")
                         .data(responsePageResponse)
                         .path(request.getRequestURI()).build()
         );
     }
 
+    @Operation(summary = "Get product details", description = "Retrieves complete details of a published product by its unique slug, including active variants, primary images, and FAQs.")
     @GetMapping("/{productSlug}")
     public ResponseEntity<ApiSuccessResponse<ProductDetailsResponse>> getDetailProduct(
             @PathVariable(value = "productSlug", required = true) String productSlug,
@@ -46,7 +51,7 @@ public class ProductController {
         return ResponseEntity.ok(
                 ApiSuccessResponse.<ProductDetailsResponse>builder()
                         .success(true)
-                        .message("Product fetch successfully")
+                        .message("Product details fetched successfully")
                         .data(productDetailsResponse)
                         .path(request.getRequestURI()).build()
         );

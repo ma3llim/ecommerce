@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -35,7 +36,7 @@ public class ProductService {
 
         if (category != null && !category.isBlank()) {
             UUID categoryId = categoryRepository.findBySlugAndActiveTrue(category).orElseThrow(() -> {
-                        log.warn("category not found category slug: {}", category);
+                        log.warn("Fetch products failed: active category not found. categorySlug={}", category);
                         return new ResourceNotFoundException("Category not found");
                     }
             ).getId();
@@ -45,7 +46,7 @@ public class ProductService {
             products = productRepository.findByPublishedTrue(pageable);
         }
 
-        List<UUID> defaultVariantIds = products.stream().map(Product::getDefaultVariantId).toList();
+        List<UUID> defaultVariantIds = products.stream().map(Product::getDefaultVariantId).filter(Objects::isNull).toList();
         List<ProductVariant> variants = defaultVariantIds.isEmpty() ? List.of() : productVariantRepository.findAllByIdInAndActiveTrue(defaultVariantIds);
 
         Map<UUID, ProductVariant> variantMap = variants.stream().collect(Collectors.toMap(
@@ -85,7 +86,7 @@ public class ProductService {
 
     public org.ecommerce.catelog.dtos.publics.ProductDetailsResponse productDetails(String productSlug) {
         Product product = productRepository.findBySlugAndPublishedTrue(productSlug).orElseThrow(() -> {
-            log.warn("Product not found, product Slug: {}", productSlug);
+            log.warn("Fetch product details failed: published product not found. productSlug={}", productSlug);
             return new ResourceNotFoundException("Product not found");
         });
 
