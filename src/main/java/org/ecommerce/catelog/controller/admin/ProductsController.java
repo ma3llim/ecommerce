@@ -7,10 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.catelog.dtos.admin.request.*;
-import org.ecommerce.catelog.dtos.admin.response.ProductDetailsResponse;
-import org.ecommerce.catelog.dtos.admin.response.ProductResponse;
-import org.ecommerce.catelog.dtos.admin.response.ProductVariantImageResponse;
-import org.ecommerce.catelog.dtos.admin.response.ProductVariantResponse;
+import org.ecommerce.catelog.dtos.admin.response.*;
 import org.ecommerce.catelog.service.admin.ProductService;
 import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.response.ApiSuccessResponse;
@@ -255,6 +252,35 @@ public class ProductsController {
                 ApiSuccessResponse.<Void>builder().success(true)
                         .message("Product variant image deleted successfully")
                         .data(null).path(request.getRequestURI()).build()
+        );
+    }
+
+    @PostMapping("/{productId}/tags/{tagId}")
+    public ResponseEntity<ApiSuccessResponse<ProductTagMappingResponse>> addTagProduct(
+            @PathVariable UUID productId, @PathVariable UUID tagId, HttpServletRequest request
+    ) {
+        ProductTagMappingResponse tagMappingResponse = productService.addTagProduct(productId, tagId);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<ProductTagMappingResponse>builder()
+                        .success(true)
+                        .message("Product tag assigned successfully")
+                        .data(tagMappingResponse)
+                        .path(request.getRequestURI()).build()
+        );
+    }
+
+    @DeleteMapping("/{productId}/tags/{tagId}")
+    public ResponseEntity<ApiSuccessResponse<Void>> deleteTagProduct(
+            @PathVariable UUID productId, @PathVariable UUID tagId, HttpServletRequest request
+    ) {
+        productService.removeTagProduct(productId, tagId);
+
+        return ResponseEntity.ok(ApiSuccessResponse.<Void>builder()
+                .success(true)
+                .message("Tag removed from product successfully")
+                .data(null)
+                .path(request.getRequestURI()).build()
         );
     }
 }

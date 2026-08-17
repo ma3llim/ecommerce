@@ -8,15 +8,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.catelog.dtos.admin.request.*;
 import org.ecommerce.catelog.dtos.admin.response.*;
-import org.ecommerce.catelog.entities.Category;
-import org.ecommerce.catelog.entities.Product;
-import org.ecommerce.catelog.entities.ProductVariant;
-import org.ecommerce.catelog.entities.ProductVariantImage;
+import org.ecommerce.catelog.entities.*;
 import org.ecommerce.catelog.enums.VisibleStatus;
-import org.ecommerce.catelog.repository.CategoryRepository;
-import org.ecommerce.catelog.repository.ProductRepository;
-import org.ecommerce.catelog.repository.ProductVariantImageRepository;
-import org.ecommerce.catelog.repository.ProductVariantRepository;
+import org.ecommerce.catelog.repository.*;
 import org.ecommerce.common.constants.AppConstants;
 import org.ecommerce.common.dtos.CloudinaryUploadResult;
 import org.ecommerce.common.dtos.PageResponse;
@@ -45,6 +39,8 @@ public class ProductService {
     private final ProductVariantRepository productVariantRepository;
     private final ProductVariantImageRepository productVariantImageRepository;
     private final CloudinaryService cloudinaryService;
+    private final TagRepository tagRepository;
+    private final ProductTagRepository productTagRepository;
     private final ObjectMapper objectMapper;
 
     public PageResponse<ProductResponse> getProducts(Pageable pageable) {
@@ -714,7 +710,57 @@ public class ProductService {
 
         log.info("Product variant status updated successfully, productId={}, variantId={}, status={}",
                 productId, variantId, status);
-        
+
         return objectMapper.convertValue(savedVariant, ProductVariantResponse.class);
+    }
+
+    public ProductTagMappingResponse addTagProduct(UUID productId, UUID tagId) {
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Add product tag failed: product not found. productId={}, tagId={}", productId, tagId);
+            return new ResourceNotFoundException("Product not found");
+        });
+
+        Tag tag = tagRepository.findById(tagId).orElseThrow(() -> {
+            log.warn("Add product tag failed: tag not found. productId={}, tagId={}", productId, tagId);
+            return new ResourceNotFoundException("Tag not found");
+        });
+
+        if (productTagRepository.existsByProductIdAndTagId(product.getId(), tag.getId())) {
+            log.warn("Add product tag rejected: tag is already assigned to product. productId={}, tagId={}",
+                    productId, tagId
+            );
+            throw new ResourceAlreadyExistsException("Tag is already assigned to this product");
+        }
+
+        ProductTag productTag = ProductTag.builder().productId(product.getId()).tagId(tag.getId()).build();
+
+        ProductTag savedProductTag = productTagRepository.save(productTag);
+        log.info("Product tag assigned successfully. productId={}, tagId={}, productTagId={}",
+                productId, tagId, savedProductTag.getId()
+        );
+
+        return objectMapper.convertValue(savedProductTag, ProductTagMappingResponse.class);
+    }
+
+
+    public void removeTagProduct(UUID productId, UUID tagId) {
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Remove product tag failed: product not found. productId={}, tagId={}", productId, tagId);
+            return new ResourceNotFoundException("Product not found");
+        });
+
+        Tag tag = tagRepository.findById(tagId).orElseThrow(() -> {
+            log.warn("Remove product tag failed: tag not found. productId={}, tagId={}", productId, tagId);
+            return new ResourceNotFoundException("Tag not found");
+        });
+
+        ProductTag productTag = productTagRepository.findByProductIdAndTagId(product.getId(), tag.getId()).orElseThrow(() -> {
+            log.warn("Remove product tag failed: tag assignment not found. productId={}, tagId={}", productId, tagId);
+            return new ResourceNotFoundException("Tag is not assigned to this product");
+        });
+
+        productTagRepository.delete(productTag);
+        log.info("Product tag removed successfully. productId={}, tagId={}, productTagId={}",
+                productId, tagId, productTag.getId());
     }
 }
