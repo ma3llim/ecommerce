@@ -60,7 +60,7 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
-    operations-sorter: method
+    operations-sorter: alpha
     tags-sorter: alpha
 
   packages-to-scan:
