@@ -43,6 +43,8 @@ public class SecurityConfig {
                                         SecurityConstants.AUTH_FORGET_PASSWORD,
                                         SecurityConstants.AUTH_RESEND_VERIFICATION,
                                         SecurityConstants.AUTH_RESET_PASSWORD,
+                                        SecurityConstants.CATEGORY_LISTING,
+                                        SecurityConstants.PRODUCT_LISTING,
                                         SecurityConstants.SWAGGER_UI,
                                         SecurityConstants.SWAGGER_UI_RESOURCES,
                                         SecurityConstants.OPEN_API_DOCS
