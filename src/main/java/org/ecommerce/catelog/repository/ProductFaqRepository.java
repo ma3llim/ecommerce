@@ -13,4 +13,6 @@ public interface ProductFaqRepository extends JpaRepository<ProductFaq, UUID> {
     Optional<ProductFaq> findByIdAndProductId(UUID faqId, UUID productId);
 
     boolean existsByIdAndProductId(UUID faqId, UUID productId);
+
+    void deleteAllByProductId(UUID productId);
 }

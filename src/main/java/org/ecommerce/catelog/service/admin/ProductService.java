@@ -41,6 +41,7 @@ public class ProductService {
     private final CloudinaryService cloudinaryService;
     private final TagRepository tagRepository;
     private final ProductTagRepository productTagRepository;
+    private final ProductFaqRepository productFaqRepository;
     private final ObjectMapper objectMapper;
 
     public PageResponse<ProductResponse> getProducts(Pageable pageable) {
@@ -150,6 +151,69 @@ public class ProductService {
                 product.getCreatedAt(),
                 product.getUpdatedAt()
         );
+    }
+
+    public ProductResponse updateProduct(UUID productId, UpdateProduct productRequest) {
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Update product request failed: product not found, productId={}", productId);
+            return new ResourceNotFoundException("Product not found");
+        });
+
+        if (productRequest.categoryId() != null && !productRequest.categoryId().equals(product.getCategoryId())) {
+            categoryRepository.findById(productRequest.categoryId()).orElseThrow(() -> {
+                log.warn("Update product request failed: category not found, productId={}, categoryId={}",
+                        productId, productRequest.categoryId());
+                return new ResourceNotFoundException("Category not found");
+            });
+
+            product.setCategoryId(productRequest.categoryId());
+        }
+
+        if (productRequest.name() != null) {
+            String productSlug = SlugUtils.generateSlug(productRequest.name());
+
+            if (productRepository.existsBySlugAndIdNot(productSlug, productId)) {
+                log.warn("Update product request rejected: product slug already exists, productId={}, slug={}",
+                        productId, productSlug);
+                throw new ResourceAlreadyExistsException("Product slug already exists");
+            }
+
+            product.setName(productRequest.name());
+            product.setSlug(productSlug);
+        }
+
+        if (productRequest.description() != null) {
+            product.setDescription(productRequest.description());
+        }
+
+        if (productRequest.specifications() != null) {
+            product.setSpecifications(productRequest.specifications());
+        }
+
+        Product savedProduct = productRepository.save(product);
+
+        log.info("Product updated successfully, productId={}, categoryId={}, slug={}",
+                savedProduct.getId(), savedProduct.getCategoryId(), savedProduct.getSlug());
+        return objectMapper.convertValue(savedProduct, ProductResponse.class);
+    }
+
+    @Transactional
+    public void deleteProduct(UUID productId) {
+        Product product = productRepository.findById(productId).orElseThrow(() -> {
+            log.warn("Delete product request failed: product not found, productId={}", productId);
+            return new ResourceNotFoundException("Product not found");
+        });
+
+        List<ProductVariant> productVariants = productVariantRepository.findAllByProductId(product.getId());
+
+        productVariants.forEach(this::deleteVariantResources);
+
+        productTagRepository.deleteAllByProductId(product.getId());
+
+        productFaqRepository.deleteAllByProductId(product.getId());
+
+        productRepository.delete(product);
+        log.info("Product deleted successfully, productId={}, variantCount={}", productId, productVariants.size());
     }
 
     @Transactional
@@ -265,50 +329,6 @@ public class ProductService {
         }
 
         return imageRecords;
-    }
-
-    public ProductResponse updateProduct(UUID productId, UpdateProduct productRequest) {
-        Product product = productRepository.findById(productId).orElseThrow(() -> {
-            log.warn("Update product request failed: product not found, productId={}", productId);
-            return new ResourceNotFoundException("Product not found");
-        });
-
-        if (productRequest.categoryId() != null && !productRequest.categoryId().equals(product.getCategoryId())) {
-            categoryRepository.findById(productRequest.categoryId()).orElseThrow(() -> {
-                log.warn("Update product request failed: category not found, productId={}, categoryId={}",
-                        productId, productRequest.categoryId());
-                return new ResourceNotFoundException("Category not found");
-            });
-
-            product.setCategoryId(productRequest.categoryId());
-        }
-
-        if (productRequest.name() != null) {
-            String productSlug = SlugUtils.generateSlug(productRequest.name());
-
-            if (productRepository.existsBySlugAndIdNot(productSlug, productId)) {
-                log.warn("Update product request rejected: product slug already exists, productId={}, slug={}",
-                        productId, productSlug);
-                throw new ResourceAlreadyExistsException("Product slug already exists");
-            }
-
-            product.setName(productRequest.name());
-            product.setSlug(productSlug);
-        }
-
-        if (productRequest.description() != null) {
-            product.setDescription(productRequest.description());
-        }
-
-        if (productRequest.specifications() != null) {
-            product.setSpecifications(productRequest.specifications());
-        }
-
-        Product savedProduct = productRepository.save(product);
-
-        log.info("Product updated successfully, productId={}, categoryId={}, slug={}",
-                savedProduct.getId(), savedProduct.getCategoryId(), savedProduct.getSlug());
-        return objectMapper.convertValue(savedProduct, ProductResponse.class);
     }
 
     public ProductVariantResponse updateProductVariant(UUID productId, UUID variantId, UpdateProductVariant productVariant) {
@@ -742,7 +762,6 @@ public class ProductService {
         return objectMapper.convertValue(savedProductTag, ProductTagMappingResponse.class);
     }
 
-
     public void removeTagProduct(UUID productId, UUID tagId) {
         Product product = productRepository.findById(productId).orElseThrow(() -> {
             log.warn("Remove product tag failed: product not found. productId={}, tagId={}", productId, tagId);
@@ -762,5 +781,17 @@ public class ProductService {
         productTagRepository.delete(productTag);
         log.info("Product tag removed successfully. productId={}, tagId={}, productTagId={}",
                 productId, tagId, productTag.getId());
+    }
+
+    private void deleteVariantResources(ProductVariant variant) {
+        List<ProductVariantImage> images = productVariantImageRepository.findAllByProductVariantId(variant.getId());
+
+        for (ProductVariantImage image : images) {
+            cloudinaryService.removeImage(image.getImagePublicId());
+        }
+
+        productVariantImageRepository.deleteAll(images);
+
+        productVariantRepository.delete(variant);
     }
 }

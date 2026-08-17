@@ -13,4 +13,6 @@ public interface ProductTagRepository extends JpaRepository<ProductTag, UUID> {
     boolean existsByProductIdAndTagId(UUID productId, UUID tagId);
 
     Optional<ProductTag> findByProductIdAndTagId(UUID productId, UUID tagId);
+
+    void deleteAllByProductId(UUID productId);
 }

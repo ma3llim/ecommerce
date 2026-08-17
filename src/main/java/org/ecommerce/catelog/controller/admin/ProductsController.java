@@ -114,6 +114,22 @@ public class ProductsController {
         );
     }
 
+    @DeleteMapping("/{productId}")
+    public ResponseEntity<ApiSuccessResponse<Void>> deleteProduct(
+            @PathVariable UUID productId, HttpServletRequest request
+    ) {
+        productService.deleteProduct(productId);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<Void>builder()
+                        .success(true)
+                        .message("Product deleted successfully")
+                        .data(null)
+                        .path(request.getRequestURI())
+                        .build()
+        );
+    }
+
     @Operation(summary = "Create product variant", description = "Creates a new variant for the specified product, including its price, stock quantity, attributes, and optional images.")
     @PostMapping(value = "/{productId}/variants", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiSuccessResponse<ProductVariantResponse>> createVariants(
