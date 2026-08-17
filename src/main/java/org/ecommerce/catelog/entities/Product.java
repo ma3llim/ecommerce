@@ -52,4 +52,20 @@ public class Product {
     private Instant createdAt;
     @LastModifiedDate
     private Instant updatedAt;
+
+    @Override
+    public String toString() {
+        return "Product{" +
+                "id=" + id +
+                ", categoryId=" + categoryId +
+                ", name='" + name + '\'' +
+                ", slug='" + slug + '\'' +
+                ", description='" + description + '\'' +
+                ", specifications=" + specifications +
+                ", defaultVariantId=" + defaultVariantId +
+                ", published=" + published +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                '}';
+    }
 }

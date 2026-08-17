@@ -41,4 +41,18 @@ public class ProductVariantImage {
     private Instant createdAt;
     @LastModifiedDate
     private Instant updatedAt;
+
+    @Override
+    public String toString() {
+        return "ProductVariantImage{" +
+                "id=" + id +
+                ", productVariantId=" + productVariantId +
+                ", imageUrl='" + imageUrl + '\'' +
+                ", imagePublicId='" + imagePublicId + '\'' +
+                ", displayOrder=" + displayOrder +
+                ", primary=" + primary +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                '}';
+    }
 }
