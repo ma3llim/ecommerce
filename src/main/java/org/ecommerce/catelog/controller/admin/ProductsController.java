@@ -114,6 +114,7 @@ public class ProductsController {
         );
     }
 
+    @Operation(summary = "Delete a product", description = "Deletes an existing product and its associated data.")
     @DeleteMapping("/{productId}")
     public ResponseEntity<ApiSuccessResponse<Void>> deleteProduct(
             @PathVariable UUID productId, HttpServletRequest request
