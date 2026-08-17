@@ -50,19 +50,4 @@ public class ProductVariant {
     private Instant createdAt;
     @LastModifiedDate
     private Instant updatedAt;
-
-    @Override
-    public String toString() {
-        return "ProductVariant{" +
-                "id=" + id +
-                ", productId=" + productId +
-                ", sku='" + sku + '\'' +
-                ", price=" + price +
-                ", stockQuantity=" + stockQuantity +
-                ", attributes=" + attributes +
-                ", active=" + active +
-                ", createdAt=" + createdAt +
-                ", updatedAt=" + updatedAt +
-                '}';
-    }
 }

@@ -2,14 +2,12 @@ package org.ecommerce.catelog.service.publics;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ecommerce.catelog.dtos.publics.ProductListResponse;
+import org.ecommerce.catelog.dtos.publics.*;
 import org.ecommerce.catelog.entities.Product;
+import org.ecommerce.catelog.entities.ProductFaq;
 import org.ecommerce.catelog.entities.ProductVariant;
 import org.ecommerce.catelog.entities.ProductVariantImage;
-import org.ecommerce.catelog.repository.CategoryRepository;
-import org.ecommerce.catelog.repository.ProductRepository;
-import org.ecommerce.catelog.repository.ProductVariantImageRepository;
-import org.ecommerce.catelog.repository.ProductVariantRepository;
+import org.ecommerce.catelog.repository.*;
 import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.exception.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
@@ -30,6 +28,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ProductVariantImageRepository productVariantImageRepository;
+    private final ProductFaqRepository productFaqRepository;
 
     public PageResponse<ProductListResponse> allProducts(String category, Pageable pageable) {
         Page<Product> products;
@@ -82,5 +81,62 @@ public class ProductService {
                 .totalPages(products.getTotalPages())
                 .first(products.isFirst())
                 .last(products.isLast()).build();
+    }
+
+    public org.ecommerce.catelog.dtos.publics.ProductDetailsResponse productDetails(String productSlug) {
+        Product product = productRepository.findBySlugAndPublishedTrue(productSlug).orElseThrow(() -> {
+            log.warn("Product not found, product Slug: {}", productSlug);
+            return new ResourceNotFoundException("Product not found");
+        });
+
+        List<ProductVariant> variants = productVariantRepository.findAllByProductIdAndActiveTrue(product.getId());
+        List<UUID> variantIds = variants.stream().map(ProductVariant::getId).toList();
+
+        List<ProductVariantImage> images = variantIds.isEmpty() ? List.of() :
+                productVariantImageRepository.findAllByProductVariantIdInAndPrimaryTrue(variantIds);
+
+        Map<UUID, List<ProductVariantImage>> imageMap = images.stream().collect(
+                Collectors.groupingBy(ProductVariantImage::getProductVariantId)
+        );
+
+        List<ProductVariantResponse> variantResponses = variants.stream().map(variant -> {
+            List<ProductVariantImage> variantImages = imageMap.getOrDefault(variant.getId(), List.of());
+
+            List<ProductVariantImageResponse> imageResponses = variantImages.stream()
+                    .map(image -> new ProductVariantImageResponse(
+                            image.getId(),
+                            image.getImageUrl(),
+                            image.getDisplayOrder(),
+                            image.isPrimary()
+                    )).toList();
+
+            return new ProductVariantResponse(
+                    variant.getId(),
+                    variant.getSku(),
+                    variant.getPrice(),
+                    variant.getStockQuantity(),
+                    variant.getAttributes(),
+                    imageResponses
+            );
+        }).toList();
+
+        List<ProductFaq> faqs = productFaqRepository.findAllByProductIdOrderByCreatedAtAsc(product.getId());
+
+        List<ProductFaqResponse> faqResponses = faqs.stream().map(faq -> new ProductFaqResponse(
+                faq.getId(),
+                faq.getQuestion(),
+                faq.getAnswer()
+        )).toList();
+
+        return new ProductDetailsResponse(
+                product.getId(),
+                product.getName(),
+                product.getSlug(),
+                product.getDescription(),
+                product.getSpecifications(),
+                product.getDefaultVariantId(),
+                variantResponses,
+                faqResponses
+        );
     }
 }
