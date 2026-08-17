@@ -20,7 +20,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ProductFaqService {
+public class AdminProductFaqService {
     private final ProductFaqRepository productFaqRepository;
     private final ProductRepository productRepository;
     private final ObjectMapper objectMapper;

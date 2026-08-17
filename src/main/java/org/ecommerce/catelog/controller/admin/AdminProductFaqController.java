@@ -10,7 +10,7 @@ import org.ecommerce.catelog.dtos.admin.request.ProductFaqCreateRequest;
 import org.ecommerce.catelog.dtos.admin.request.ProductFaqStatusRequest;
 import org.ecommerce.catelog.dtos.admin.request.ProductFaqUpdateRequest;
 import org.ecommerce.catelog.dtos.admin.response.ProductFaqResponse;
-import org.ecommerce.catelog.service.admin.ProductFaqService;
+import org.ecommerce.catelog.service.admin.AdminProductFaqService;
 import org.ecommerce.common.response.ApiSuccessResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,8 +23,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Admin - Product FAQ Management", description = "APIs for administrators to create, view, update, activate, deactivate, and delete product FAQs")
-public class ProductFaqController {
-    private final ProductFaqService productFaqService;
+public class AdminProductFaqController {
+    private final AdminProductFaqService adminProductFaqService;
 
     @Operation(summary = "Create product FAQ", description = "Creates a new FAQ for the specified product.")
     @PostMapping
@@ -33,7 +33,7 @@ public class ProductFaqController {
             @Valid @RequestBody ProductFaqCreateRequest requestData,
             HttpServletRequest request
     ) {
-        ProductFaqResponse response = productFaqService.create(productId, requestData);
+        ProductFaqResponse response = adminProductFaqService.create(productId, requestData);
         return ResponseEntity.ok(
                 ApiSuccessResponse.<ProductFaqResponse>builder()
                         .success(true).message("Product FAQ created successfully.")
@@ -45,7 +45,7 @@ public class ProductFaqController {
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<List<ProductFaqResponse>>> getAllFaqs(
             @PathVariable UUID productId, HttpServletRequest request) {
-        List<ProductFaqResponse> response = productFaqService.getAll(productId);
+        List<ProductFaqResponse> response = adminProductFaqService.getAll(productId);
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<List<ProductFaqResponse>>builder()
@@ -60,7 +60,7 @@ public class ProductFaqController {
             @PathVariable UUID productId, @PathVariable UUID faqId,
             HttpServletRequest request
     ) {
-        ProductFaqResponse response = productFaqService.getById(productId, faqId);
+        ProductFaqResponse response = adminProductFaqService.getById(productId, faqId);
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<ProductFaqResponse>builder()
@@ -77,7 +77,7 @@ public class ProductFaqController {
             @Valid @RequestBody ProductFaqUpdateRequest requestData,
             HttpServletRequest request
     ) {
-        ProductFaqResponse response = productFaqService.update(productId, faqId, requestData);
+        ProductFaqResponse response = adminProductFaqService.update(productId, faqId, requestData);
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<ProductFaqResponse>builder()
@@ -94,7 +94,7 @@ public class ProductFaqController {
             @Valid @RequestBody ProductFaqStatusRequest requestData,
             HttpServletRequest request
     ) {
-        ProductFaqResponse response = productFaqService.updateStatus(productId, faqId, requestData);
+        ProductFaqResponse response = adminProductFaqService.updateStatus(productId, faqId, requestData);
 
         String message = requestData.active() ? "Product FAQ activated successfully." : "Product FAQ deactivated successfully.";
 
@@ -110,7 +110,7 @@ public class ProductFaqController {
     )
     @DeleteMapping("/{faqId}")
     public ResponseEntity<ApiSuccessResponse<Void>> deleteFaq(@PathVariable UUID productId, @PathVariable UUID faqId, HttpServletRequest request) {
-        productFaqService.delete(productId, faqId);
+        adminProductFaqService.delete(productId, faqId);
         return ResponseEntity.ok(
                 ApiSuccessResponse.<Void>builder()
                         .success(true).message("Product FAQ deleted successfully")

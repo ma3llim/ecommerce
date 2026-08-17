@@ -8,7 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.catelog.dtos.admin.request.*;
 import org.ecommerce.catelog.dtos.admin.response.*;
-import org.ecommerce.catelog.service.admin.ProductService;
+import org.ecommerce.catelog.service.admin.AdminProductService;
 import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.response.ApiSuccessResponse;
 import org.springframework.data.domain.Pageable;
@@ -29,15 +29,15 @@ import java.util.UUID;
 @RequestMapping("/api/v1/admin/products")
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Admin - Product Management", description = "APIs for administrators to manage products, variants, and variant images")
-public class ProductsController {
-    private final ProductService productService;
+public class AdminProductsController {
+    private final AdminProductService adminProductService;
 
     @Operation(summary = "Get all products", description = "Retrieves a paginated list of products sorted by creation date in descending order.")
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<PageResponse<ProductResponse>>> getProducts(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable, HttpServletRequest request) {
-        PageResponse<ProductResponse> products = productService.getProducts(pageable);
+        PageResponse<ProductResponse> products = adminProductService.getProducts(pageable);
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<PageResponse<ProductResponse>>builder()
@@ -53,7 +53,7 @@ public class ProductsController {
     @GetMapping("/{productId}")
     public ResponseEntity<ApiSuccessResponse<ProductDetailsResponse>> getProduct(
             @PathVariable UUID productId, HttpServletRequest request) {
-        ProductDetailsResponse productDetailsResponse = productService.getProduct(productId);
+        ProductDetailsResponse productDetailsResponse = adminProductService.getProduct(productId);
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<ProductDetailsResponse>builder()
@@ -71,7 +71,7 @@ public class ProductsController {
             @Valid @RequestBody AddProductRequest productRequest,
             HttpServletRequest request) {
 
-        ProductResponse productResponse = productService.createProduct(productRequest);
+        ProductResponse productResponse = adminProductService.createProduct(productRequest);
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<ProductResponse>builder()
@@ -89,7 +89,7 @@ public class ProductsController {
             @Valid @RequestBody UpdateProduct productRequest,
             HttpServletRequest request
     ) {
-        ProductResponse productResponse = productService.updateProduct(productId, productRequest);
+        ProductResponse productResponse = adminProductService.updateProduct(productId, productRequest);
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ApiSuccessResponse.<ProductResponse>builder()
@@ -106,7 +106,7 @@ public class ProductsController {
             @PathVariable UUID productId, @Valid @RequestBody UpdateProductStatus productStatus,
             HttpServletRequest request
     ) {
-        ProductResponse productResponse = productService.updateProductStatus(productId, productStatus.status());
+        ProductResponse productResponse = adminProductService.updateProductStatus(productId, productStatus.status());
         return ResponseEntity.status(HttpStatus.OK).body(
                 ApiSuccessResponse.<ProductResponse>builder().success(true)
                         .message("Product status updated successfully")
@@ -119,7 +119,7 @@ public class ProductsController {
     public ResponseEntity<ApiSuccessResponse<Void>> deleteProduct(
             @PathVariable UUID productId, HttpServletRequest request
     ) {
-        productService.deleteProduct(productId);
+        adminProductService.deleteProduct(productId);
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<Void>builder()
@@ -137,7 +137,7 @@ public class ProductsController {
             @PathVariable UUID productId, @Valid @ModelAttribute AddProductVariants addProductVariants,
             HttpServletRequest request) {
 
-        ProductVariantResponse productVariantResponse = productService.addProductVariant(productId, addProductVariants);
+        ProductVariantResponse productVariantResponse = adminProductService.addProductVariant(productId, addProductVariants);
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<ProductVariantResponse>builder()
@@ -155,7 +155,7 @@ public class ProductsController {
             @Valid @RequestBody UpdateProductVariant productVariant,
             HttpServletRequest request
     ) {
-        ProductVariantResponse productVariantResponse = productService
+        ProductVariantResponse productVariantResponse = adminProductService
                 .updateProductVariant(productId, variantId, productVariant);
 
         return ResponseEntity.status(HttpStatus.OK).body(
@@ -171,7 +171,7 @@ public class ProductsController {
             @PathVariable UUID productId, @PathVariable UUID variantId,
             HttpServletRequest request
     ) {
-        productService.deleteVariant(productId, variantId);
+        adminProductService.deleteVariant(productId, variantId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
                 ApiSuccessResponse.<Void>builder().success(true)
                         .message("Product variant deleted successfully")
@@ -186,7 +186,7 @@ public class ProductsController {
             @Valid @RequestBody UpdateVariantStatus requestData,
             HttpServletRequest request
     ) {
-        ProductVariantResponse productVariantResponse = productService.updateVariantStatus(productId, variantId, requestData.status());
+        ProductVariantResponse productVariantResponse = adminProductService.updateVariantStatus(productId, variantId, requestData.status());
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ApiSuccessResponse.<ProductVariantResponse>builder().success(true)
@@ -202,7 +202,7 @@ public class ProductsController {
             @Valid @ModelAttribute AddImages images,
             HttpServletRequest request
     ) {
-        List<ProductVariantImageResponse> productVariantImageResponse = productService.uploadsImage(productId, variantId, images);
+        List<ProductVariantImageResponse> productVariantImageResponse = adminProductService.uploadsImage(productId, variantId, images);
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ApiSuccessResponse.<List<ProductVariantImageResponse>>builder().success(true)
@@ -217,7 +217,7 @@ public class ProductsController {
             @PathVariable UUID productId, @PathVariable UUID variantId, @PathVariable UUID variantImageId,
             @Valid @ModelAttribute ReplaceImage image, HttpServletRequest request
     ) {
-        ProductVariantImageResponse productVariantImageResponse = productService.replaceImage(
+        ProductVariantImageResponse productVariantImageResponse = adminProductService.replaceImage(
                 productId, variantId, variantImageId, image);
 
         return ResponseEntity.status(HttpStatus.OK).body(
@@ -233,7 +233,7 @@ public class ProductsController {
             @PathVariable UUID productId, @PathVariable UUID variantId, @PathVariable UUID variantImageId,
             HttpServletRequest request
     ) {
-        ProductVariantImageResponse productVariantImageResponse = productService.setVariantImagePrimary(
+        ProductVariantImageResponse productVariantImageResponse = adminProductService.setVariantImagePrimary(
                 productId, variantId, variantImageId);
 
         return ResponseEntity.status(HttpStatus.OK).body(
@@ -249,7 +249,7 @@ public class ProductsController {
             @PathVariable UUID productId, @PathVariable UUID variantId,
             @Valid @RequestBody ReorderImages reorderImages, HttpServletRequest request
     ) {
-        List<ProductVariantImageResponse> productVariantImageResponseList = productService.reorderImages(productId, variantId, reorderImages);
+        List<ProductVariantImageResponse> productVariantImageResponseList = adminProductService.reorderImages(productId, variantId, reorderImages);
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ApiSuccessResponse.<List<ProductVariantImageResponse>>builder().success(true)
@@ -264,7 +264,7 @@ public class ProductsController {
             @PathVariable UUID productId, @PathVariable UUID variantId, @PathVariable UUID imageVariantId,
             HttpServletRequest request
     ) {
-        productService.deleteVariantImage(productId, variantId, imageVariantId);
+        adminProductService.deleteVariantImage(productId, variantId, imageVariantId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
                 ApiSuccessResponse.<Void>builder().success(true)
                         .message("Product variant image deleted successfully")
@@ -277,7 +277,7 @@ public class ProductsController {
     public ResponseEntity<ApiSuccessResponse<ProductTagMappingResponse>> addTagProduct(
             @PathVariable UUID productId, @PathVariable UUID tagId, HttpServletRequest request
     ) {
-        ProductTagMappingResponse tagMappingResponse = productService.addTagProduct(productId, tagId);
+        ProductTagMappingResponse tagMappingResponse = adminProductService.addTagProduct(productId, tagId);
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<ProductTagMappingResponse>builder()
@@ -293,7 +293,7 @@ public class ProductsController {
     public ResponseEntity<ApiSuccessResponse<Void>> deleteTagProduct(
             @PathVariable UUID productId, @PathVariable UUID tagId, HttpServletRequest request
     ) {
-        productService.removeTagProduct(productId, tagId);
+        adminProductService.removeTagProduct(productId, tagId);
 
         return ResponseEntity.ok(ApiSuccessResponse.<Void>builder()
                 .success(true)

@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.ecommerce.catelog.dtos.admin.request.AddCategoryRequest;
 import org.ecommerce.catelog.dtos.admin.request.UpdateCategoryRequest;
 import org.ecommerce.catelog.dtos.admin.response.CategoryResponse;
-import org.ecommerce.catelog.service.admin.CategoryService;
+import org.ecommerce.catelog.service.admin.AdminCategoryService;
 import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.response.ApiSuccessResponse;
 import org.springframework.data.domain.Pageable;
@@ -28,14 +28,14 @@ import java.util.UUID;
 @RequestMapping("/api/v1/admin/categories")
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Admin - Category Management", description = "Admin APIs for creating, viewing, updating, and deleting product categories")
-public class CategoryController {
-    private final CategoryService categoryService;
+public class AdminCategoryController {
+    private final AdminCategoryService adminCategoryService;
 
     @Operation(summary = "Create a category", description = "Creates a new product category with an optional category image.")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiSuccessResponse<CategoryResponse>> createCategory(
             @Valid @ModelAttribute AddCategoryRequest newCategory, HttpServletRequest request) {
-        CategoryResponse categoryResponse = categoryService.createCategory(newCategory);
+        CategoryResponse categoryResponse = adminCategoryService.createCategory(newCategory);
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<CategoryResponse>builder()
@@ -49,7 +49,7 @@ public class CategoryController {
     public ResponseEntity<ApiSuccessResponse<PageResponse<CategoryResponse>>> getAllCategories(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             HttpServletRequest request) {
-        PageResponse<CategoryResponse> allCategories = categoryService.getAllCategories(pageable);
+        PageResponse<CategoryResponse> allCategories = adminCategoryService.getAllCategories(pageable);
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<PageResponse<CategoryResponse>>builder()
@@ -63,7 +63,7 @@ public class CategoryController {
     @PutMapping(value = "/{categoryId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiSuccessResponse<CategoryResponse>> updateCategory(@PathVariable UUID categoryId,
                                                                                @Valid @ModelAttribute UpdateCategoryRequest categoryRequest, HttpServletRequest request) {
-        CategoryResponse categoryResponse = categoryService.updateCategory(categoryId, categoryRequest);
+        CategoryResponse categoryResponse = adminCategoryService.updateCategory(categoryId, categoryRequest);
         return ResponseEntity.ok(
                 ApiSuccessResponse.<CategoryResponse>builder()
                         .success(true).message("Category updated successfully")
@@ -74,7 +74,7 @@ public class CategoryController {
     @Operation(summary = "Delete a category", description = "Deletes an existing category and its associated image.")
     @DeleteMapping("/{categoryId}")
     public ResponseEntity<ApiSuccessResponse<Void>> deleteCategory(@PathVariable UUID categoryId, HttpServletRequest request) {
-        categoryService.deleteCategory(categoryId);
+        adminCategoryService.deleteCategory(categoryId);
         return ResponseEntity.ok(ApiSuccessResponse.<Void>builder()
                 .success(true)
                 .message("Category deleted successfully")

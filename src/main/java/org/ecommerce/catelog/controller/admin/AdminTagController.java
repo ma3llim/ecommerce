@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.catelog.dtos.admin.request.TagRequest;
 import org.ecommerce.catelog.dtos.admin.response.TagResponse;
-import org.ecommerce.catelog.service.admin.TagService;
+import org.ecommerce.catelog.service.admin.AdminTagService;
 import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.response.ApiSuccessResponse;
 import org.springframework.data.domain.Pageable;
@@ -27,8 +27,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Admin - Tag Management", description = "APIs for administrators to create, retrieve, update, and delete product tags")
-public class TagController {
-    private final TagService tagService;
+public class AdminTagController {
+    private final AdminTagService tagService;
 
     @Operation(summary = "Create a product tag", description = "Creates a new tag that can be assigned to products.")
     @PostMapping

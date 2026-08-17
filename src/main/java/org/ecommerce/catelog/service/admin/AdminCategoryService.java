@@ -24,7 +24,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class CategoryService {
+public class AdminCategoryService {
     private final CategoryRepository categoryRepository;
     private final CloudinaryService cloudinaryService;
     private final ObjectMapper objectMapper;

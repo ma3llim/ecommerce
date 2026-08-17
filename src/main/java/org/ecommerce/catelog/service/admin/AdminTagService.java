@@ -21,7 +21,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TagService {
+public class AdminTagService {
     private final TagRepository tagRepository;
     private final ProductTagRepository productTagRepository;
     private final ObjectMapper objectMapper;
