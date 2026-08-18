@@ -58,6 +58,7 @@ public class ProductController {
         );
     }
 
+    @Operation(summary = "Get product reviews", description = "Retrieves a paginated list of reviews for a published product using its unique slug.")
     @GetMapping("/{productSlug}/reviews")
     public ResponseEntity<ApiSuccessResponse<PageResponse<ProductReviewResponse>>> getProductReview(
             @PathVariable(value = "productSlug", required = true) String productSlug,
