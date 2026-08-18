@@ -33,7 +33,7 @@ public class Order {
 
     @Column(name = "shipping_address_id", nullable = false)
     private UUID shippingAddressId;
-    
+
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 

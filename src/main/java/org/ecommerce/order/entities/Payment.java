@@ -29,6 +29,9 @@ public class Payment {
     @Column(name = "order_id", nullable = false)
     private UUID orderId;
 
+    @Column(name = "razorpay_order_id", unique = true)
+    private String razorpayOrderId;
+    
     @Column(name = "transaction_id", nullable = false, unique = true)
     private String transactionId;
 
