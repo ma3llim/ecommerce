@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/coupons/apply")
 @PreAuthorize("hasRole('USER')")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "User - Coupon", description = "APIs for applying coupons to the user's cart")
+@Tag(name = "Coupon", description = "APIs for applying coupons to the user's cart")
 public class CouponController {
     private final CouponService couponService;
 
