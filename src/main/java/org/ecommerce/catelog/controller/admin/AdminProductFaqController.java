@@ -13,6 +13,7 @@ import org.ecommerce.catelog.dtos.admin.response.ProductFaqResponse;
 import org.ecommerce.catelog.service.admin.AdminProductFaqService;
 import org.ecommerce.common.response.ApiSuccessResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/admin/products/{productId}/faqs")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Admin - Product FAQ Management", description = "APIs for administrators to create, view, update, activate, deactivate, and delete product FAQs")
 public class AdminProductFaqController {

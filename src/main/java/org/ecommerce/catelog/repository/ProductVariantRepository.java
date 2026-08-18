@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, UUID> {
@@ -12,7 +13,11 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     List<ProductVariant> findAllByProductId(UUID productId);
 
+    Optional<ProductVariant> findByIdAndActiveTrue(UUID productId);
+
     List<ProductVariant> findAllByProductIdAndActiveTrue(UUID productId);
 
     List<ProductVariant> findAllByIdInAndActiveTrue(Collection<UUID> ids);
+
+
 }

@@ -1,0 +1,73 @@
+package org.ecommerce.review.controller;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.ecommerce.common.response.ApiSuccessResponse;
+import org.ecommerce.review.dtos.request.CreateReviewRequest;
+import org.ecommerce.review.dtos.request.UpdateReviewRequest;
+import org.ecommerce.review.dtos.response.ReviewResponse;
+import org.ecommerce.review.service.ReviewService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@PreAuthorize("hasRole('USER')")
+@RequestMapping("/api/v1/reviews")
+@RequiredArgsConstructor
+public class ReviewController {
+    private final ReviewService reviewService;
+
+    @PostMapping
+    public ResponseEntity<ApiSuccessResponse<ReviewResponse>> createReview(
+            @Valid @RequestBody CreateReviewRequest request, Authentication authentication,
+            HttpServletRequest httpRequest
+    ) {
+        ReviewResponse response = reviewService.createReview(request, authentication);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiSuccessResponse.<ReviewResponse>builder()
+                        .success(true)
+                        .message("Review submitted successfully")
+                        .data(response)
+                        .path(httpRequest.getRequestURI())
+                        .build()
+                );
+    }
+
+    @PatchMapping("/{reviewId}")
+    public ResponseEntity<ApiSuccessResponse<ReviewResponse>> updateReview(
+            @PathVariable UUID reviewId, @Valid @RequestBody UpdateReviewRequest request,
+            Authentication authentication, HttpServletRequest httpRequest
+    ) {
+        ReviewResponse response = reviewService.updateReview(reviewId, request, authentication);
+
+        return ResponseEntity.ok(ApiSuccessResponse.<ReviewResponse>builder()
+                .success(true)
+                .message("Review updated successfully")
+                .data(response)
+                .path(httpRequest.getRequestURI())
+                .build()
+        );
+    }
+
+    @DeleteMapping("/{reviewId}")
+    public ResponseEntity<ApiSuccessResponse<Void>> deleteReview(
+            @PathVariable UUID reviewId, Authentication authentication, HttpServletRequest httpRequest
+    ) {
+        reviewService.deleteReview(reviewId, authentication);
+
+        return ResponseEntity.ok(ApiSuccessResponse.<Void>builder()
+                .success(true)
+                .message("Review deleted successfully")
+                .data(null)
+                .path(httpRequest.getRequestURI())
+                .build()
+        );
+    }
+}
