@@ -1,25 +1,21 @@
-package org.ecommerce.coupon.dtos.publics.request;
+package org.ecommerce.coupon.dtos.admin.request;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import org.ecommerce.common.enums.DiscountType;
+import org.ecommerce.common.validator.OptionalNotBlank.OptionalNotBlank;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 
-public record CreateCouponRequest(
-        @NotBlank(message = "Coupon code is required")
-        @Size(max = 50, message = "Coupon code must not exceed 50 characters")
-        String code,
-
-        @NotBlank(message = "Coupon name is required")
+public record UpdateCouponRequest(
+        @OptionalNotBlank(message = "Coupon name is required")
         String name,
 
         String description,
 
-        @NotNull(message = "Discount type is required")
         DiscountType discountType,
 
-        @NotNull(message = "Discount value is required")
         @DecimalMin(value = "0.01", message = "Discount value must be greater than zero")
         BigDecimal discountValue,
 
@@ -32,10 +28,8 @@ public record CreateCouponRequest(
         @Min(value = 1, message = "Usage limit must be greater than zero")
         Integer usageLimit,
 
-        @NotNull(message = "Valid from is required")
         Instant validFrom,
 
-        @NotNull(message = "Valid until is required")
         Instant validUntil
 ) {
 }

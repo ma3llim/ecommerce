@@ -1,4 +1,4 @@
-package org.ecommerce.coupon.dtos.publics.request;
+package org.ecommerce.coupon.dtos.admin.request;
 
 import jakarta.validation.constraints.NotNull;
 import org.ecommerce.common.enums.VisibleStatus;

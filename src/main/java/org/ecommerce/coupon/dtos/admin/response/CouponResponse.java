@@ -1,4 +1,4 @@
-package org.ecommerce.coupon.dtos.publics.response;
+package org.ecommerce.coupon.dtos.admin.response;
 
 import lombok.Builder;
 import org.ecommerce.common.enums.DiscountType;

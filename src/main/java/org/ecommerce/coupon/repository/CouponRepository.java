@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface CouponRepository extends JpaRepository<Coupon, UUID> {
-    Optional<Coupon> findByCodeIgnoreCase(String code);
+    Optional<Coupon> findByCodeIgnoreCaseAndActiveTrue(String code);
 
     boolean existsByCodeIgnoreCase(String code);
 
