@@ -38,15 +38,14 @@ public class OpenApiConfig {
     public GroupedOpenApi userApi() {
         return GroupedOpenApi.builder()
                 .group("user-apis")
-                .pathsToMatch("/api/v1/users/**", "/api/v1/users/**", "/api/v1/auth/**")
-                .build();
-    }
-
-    @Bean
-    public GroupedOpenApi catalogApi() {
-        return GroupedOpenApi.builder()
-                .group("catalog-apis")
-                .pathsToMatch("/api/v1/products/**", "/api/v1/categories/**")
+                .pathsToMatch(
+                        "/api/v1/users/**",
+                        "/api/v1/auth/**",
+                        "/api/v1/products/**",
+                        "/api/v1/categories/**",
+                        "/api/v1/reviews/**",
+                        "/api/v1/cart/**"
+                )
                 .build();
     }
 

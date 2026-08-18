@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.entities.User;
+import org.ecommerce.auth.repository.UserRepository;
 import org.ecommerce.catelog.entities.Product;
 import org.ecommerce.catelog.entities.ProductVariant;
 import org.ecommerce.catelog.repository.ProductRepository;
@@ -26,12 +27,17 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ReviewService {
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ReviewRepository reviewRepository;
     private final ObjectMapper objectMapper;
 
     public ReviewResponse createReview(@Valid CreateReviewRequest request, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("create review request failed: user not found, userId={}", userId);
+            return new ResourceNotFoundException("User not found");
+        });
 
         Product product = productRepository.findByIdAndPublishedTrue(request.productId()).orElseThrow(() -> {
             log.warn("Create review failed: published product not found. productId={}, userId={}", request.productId(), userId);
@@ -56,7 +62,7 @@ public class ReviewService {
             log.warn("Create review rejected: user already reviewed product. productId={}, userId={}", product.getId(), userId);
             throw new BadRequestException("You have already reviewed this product");
         }
-        
+
         /* boolean verifiedPurchase here we need one function to check user is purchase or not in order service */
         boolean verifiedPurchase = true;
         if (!verifiedPurchase) {
@@ -86,6 +92,10 @@ public class ReviewService {
 
     public ReviewResponse updateReview(UUID reviewId, @Valid UpdateReviewRequest request, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("update review request failed: user not found, userId={}", userId);
+            return new ResourceNotFoundException("User not found");
+        });
 
         Review review = reviewRepository.findByIdAndUserId(reviewId, userId).orElseThrow(() -> {
             log.warn("Update review failed: review not found or user is not the owner. reviewId={}, userId={}",
@@ -111,6 +121,12 @@ public class ReviewService {
 
     public void deleteReview(UUID reviewId, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
+        
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("delete review request failed: user not found, userId={}", userId);
+            return new ResourceNotFoundException("User not found");
+        });
+
         Review review = reviewRepository.findByIdAndUserId(reviewId, userId).orElseThrow(() -> {
             log.warn("Delete review failed: review not found or user is not the owner. reviewId={}, userId={}",
                     reviewId, userId);
