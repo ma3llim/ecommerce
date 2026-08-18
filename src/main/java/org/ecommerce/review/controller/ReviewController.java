@@ -1,5 +1,8 @@
 package org.ecommerce.review.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,10 +22,13 @@ import java.util.UUID;
 @RestController
 @PreAuthorize("hasRole('USER')")
 @RequestMapping("/api/v1/reviews")
+@SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
+@Tag(name = "Review Management", description = "APIs for authenticated users to create, update, and delete their product reviews")
 public class ReviewController {
     private final ReviewService reviewService;
 
+    @Operation(summary = "Create a product review", description = "Allows an authenticated user to submit a review for a purchased product.")
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<ReviewResponse>> createReview(
             @Valid @RequestBody CreateReviewRequest request, Authentication authentication,
@@ -40,6 +46,7 @@ public class ReviewController {
                 );
     }
 
+    @Operation(summary = "Update a review", description = "Allows an authenticated user to update their own product review.")
     @PatchMapping("/{reviewId}")
     public ResponseEntity<ApiSuccessResponse<ReviewResponse>> updateReview(
             @PathVariable UUID reviewId, @Valid @RequestBody UpdateReviewRequest request,
@@ -56,6 +63,7 @@ public class ReviewController {
         );
     }
 
+    @Operation(summary = "Delete a review", description = "Allows an authenticated user to delete their own product review.")
     @DeleteMapping("/{reviewId}")
     public ResponseEntity<ApiSuccessResponse<Void>> deleteReview(
             @PathVariable UUID reviewId, Authentication authentication, HttpServletRequest httpRequest
