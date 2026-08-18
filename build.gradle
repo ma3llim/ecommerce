@@ -58,7 +58,7 @@ dependencies {
     // Lombok for tests
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
-    // Database H2 for
+    // Database H2 for testing
     testRuntimeOnly 'com.h2database:h2'
 }
 
@@ -71,7 +71,7 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = 'org.ecommerce.EcommerceAplication'
+    mainClass = 'org.ecommerce.EcommerceApplication'
 }
 
 tasks.named('test') {

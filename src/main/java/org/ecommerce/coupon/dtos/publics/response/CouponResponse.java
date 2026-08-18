@@ -1,11 +1,13 @@
 package org.ecommerce.coupon.dtos.publics.response;
 
+import lombok.Builder;
 import org.ecommerce.common.enums.DiscountType;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+@Builder
 public record CouponResponse(
         UUID id,
         String code,
