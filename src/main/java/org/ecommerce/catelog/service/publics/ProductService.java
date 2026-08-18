@@ -10,6 +10,8 @@ import org.ecommerce.catelog.entities.ProductVariantImage;
 import org.ecommerce.catelog.repository.*;
 import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.exception.ResourceNotFoundException;
+import org.ecommerce.review.entities.Review;
+import org.ecommerce.review.repository.ReviewRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class ProductService {
     private final ProductVariantRepository productVariantRepository;
     private final ProductVariantImageRepository productVariantImageRepository;
     private final ProductFaqRepository productFaqRepository;
+    private final ReviewRepository reviewRepository;
 
     public PageResponse<ProductListResponse> allProducts(String category, Pageable pageable) {
         Page<Product> products;
@@ -138,6 +141,35 @@ public class ProductService {
                 product.getDefaultVariantId(),
                 variantResponses,
                 faqResponses
+        );
+    }
+
+    public PageResponse<ProductReviewResponse> getProductReview(String productSlug, Pageable pageable) {
+        Product product = productRepository.findBySlugAndPublishedTrue(productSlug).orElseThrow(() -> {
+            log.warn("Product not found for reviews. slug={}", productSlug);
+            return new ResourceNotFoundException("Product not found");
+        });
+
+        Page<Review> reviews = reviewRepository.findByProductIdOrderByCreatedAtDesc(product.getId(), pageable);
+        List<ProductReviewResponse> content = reviews.getContent().stream().map(
+                review -> ProductReviewResponse.builder()
+                        .id(review.getId())
+                        .rating(review.getRating())
+                        .title(review.getTitle())
+                        .review(review.getReview())
+                        .verifiedPurchase(review.isVerifiedPurchase())
+                        .createdAt(review.getCreatedAt())
+                        .build()
+        ).toList();
+
+        return new PageResponse<>(
+                content,
+                reviews.getNumber(),
+                reviews.getSize(),
+                reviews.getTotalElements(),
+                reviews.getTotalPages(),
+                reviews.isFirst(),
+                reviews.isLast()
         );
     }
 }

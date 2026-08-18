@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.catelog.dtos.publics.ProductDetailsResponse;
 import org.ecommerce.catelog.dtos.publics.ProductListResponse;
+import org.ecommerce.catelog.dtos.publics.ProductReviewResponse;
 import org.ecommerce.catelog.service.publics.ProductService;
 import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.response.ApiSuccessResponse;
@@ -53,6 +54,23 @@ public class ProductController {
                         .success(true)
                         .message("Product details fetched successfully")
                         .data(productDetailsResponse)
+                        .path(request.getRequestURI()).build()
+        );
+    }
+
+    @GetMapping("/{productSlug}/reviews")
+    public ResponseEntity<ApiSuccessResponse<PageResponse<ProductReviewResponse>>> getProductReview(
+            @PathVariable(value = "productSlug", required = true) String productSlug,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            HttpServletRequest request
+    ) {
+        PageResponse<ProductReviewResponse> productReviewResponse = productService.getProductReview(productSlug, pageable);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<PageResponse<ProductReviewResponse>>builder()
+                        .success(true)
+                        .message("Product reviews fetched successfully")
+                        .data(productReviewResponse)
                         .path(request.getRequestURI()).build()
         );
     }
