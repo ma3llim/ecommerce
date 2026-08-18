@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/products")
-@Tag(name = "Public - Product", description = "Public APIs for browsing products and viewing product details")
+@Tag(name = "Product", description = "Public APIs for browsing products and viewing product details")
 public class ProductController {
     private final ProductService productService;
 
