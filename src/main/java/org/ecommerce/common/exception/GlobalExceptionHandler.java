@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import javax.naming.AuthenticationException;
 import java.nio.file.AccessDeniedException;
@@ -109,6 +110,20 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoResourceFoundException(NoResourceFoundException exception,
+                                                                           HttpServletRequest request) {
+
+        ApiErrorResponse response = ApiErrorResponse.builder()
+                .success(false)
+                .message(exception.getMessage())
+                .errorCode("NO_RESOURCE_FOUND")
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
     @ExceptionHandler(AuthorizationDeniedException.class)
