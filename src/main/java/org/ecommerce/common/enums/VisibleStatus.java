@@ -1,4 +1,4 @@
-package org.ecommerce.catelog.enums;
+package org.ecommerce.common.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
