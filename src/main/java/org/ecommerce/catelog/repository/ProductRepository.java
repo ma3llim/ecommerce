@@ -18,4 +18,6 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     Page<Product> findByPublishedTrue(Pageable pageable);
 
     Optional<Product> findBySlugAndPublishedTrue(String productSlug);
+
+    Optional<Product> findByIdAndPublishedTrue(UUID productId);
 }
