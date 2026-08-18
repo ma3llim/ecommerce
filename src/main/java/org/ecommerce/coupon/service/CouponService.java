@@ -47,6 +47,8 @@ public class CouponService {
         List<CartItem> cartItems = cartItemRepository.findByCartId(cart.getId());
 
         if (cartItems.isEmpty()) {
+            log.warn("Apply coupon rejected: cart is empty. cartId={}, userId={}, couponCode={}",
+                    cart.getId(), userId, code);
             throw new BadRequestException("Cannot apply coupon to an empty cart");
         }
 
@@ -61,14 +63,20 @@ public class CouponService {
         Instant now = Instant.now();
 
         if (now.isBefore(coupon.getValidFrom()) || now.isAfter(coupon.getValidUntil())) {
+            log.warn("Apply coupon rejected: coupon is outside validity period. couponCode={}, userId={}, validFrom={}, validUntil={}",
+                    coupon.getCode(), userId, coupon.getValidFrom(), coupon.getValidUntil());
             throw new BadRequestException("Coupon is expired or not yet active");
         }
 
         if (coupon.getUsageLimit() != null && coupon.getUsedCount() >= coupon.getUsageLimit()) {
-            throw new BadRequestException("Coupon usage limit reached");
+            log.warn("Apply coupon rejected: usage limit reached. couponCode={}, userId={}, usedCount={}, usageLimit={}",
+                    coupon.getCode(), userId, coupon.getUsedCount(), coupon.getUsageLimit());
+            throw new BadRequestException("Coupon usage limit has been reached");
         }
 
         if (coupon.getMinimumOrderAmount() != null && cartSubTotal.compareTo(coupon.getMinimumOrderAmount()) < 0) {
+            log.warn("Apply coupon rejected: minimum order amount not met. couponCode={}, userId={}, subtotal={}, minimumOrderAmount={}",
+                    coupon.getCode(), userId, cartSubTotal, coupon.getMinimumOrderAmount());
             throw new BadRequestException("Minimum order amount for this coupon is " + coupon.getMinimumOrderAmount());
         }
 
@@ -92,6 +100,6 @@ public class CouponService {
                 userId, coupon.getCode(), cartSubTotal, discountAmount, finalAmount
         );
 
-        return new ApplyCouponResponse(cartSubTotal, discountAmount, finalAmount, coupon.getCode());
+        return new ApplyCouponResponse(cartSubTotal, discountAmount, finalAmount, coupon.getCode().toUpperCase());
     }
 }

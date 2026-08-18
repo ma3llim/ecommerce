@@ -1,6 +1,8 @@
 package org.ecommerce.coupon.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/coupons/apply")
 @PreAuthorize("hasRole('USER')")
 @SecurityRequirement(name = "bearerAuth")
+@Tag(name = "User - Coupon", description = "APIs for applying coupons to the user's cart")
 public class CouponController {
     private final CouponService couponService;
 
+    @Operation(summary = "Apply coupon code", description = "Applies a valid coupon code to the authenticated user's cart and returns the discount and final payable amount.")
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<ApplyCouponResponse>> applyCouponCode(
             @Valid @RequestBody CouponRequest couponRequest,
