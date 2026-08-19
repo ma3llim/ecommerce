@@ -222,7 +222,7 @@ public class OrderService {
         }
 
         PaymentResponse paymentResponse = objectMapper.convertValue(payment, PaymentResponse.class);
-        
+
         log.info("Order created successfully. orderId={}, orderNumber={}, userId={}, paymentMethod={}, subtotal={}, " +
                         "discount={}, shipping={}, tax={}, total={}",
                 order.getId(), order.getOrderNumber(), userId, request.paymentMethod(), subTotal, discountAmount,
@@ -243,7 +243,6 @@ public class OrderService {
                 .payment(paymentResponse)
                 .build();
     }
-
 
     private String generateOrderNumber() {
         String date = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);

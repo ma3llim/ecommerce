@@ -1,6 +1,8 @@
 package org.ecommerce.order.controller;
 
 import com.razorpay.RazorpayException;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("hasRole('USER')")
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
+@Tag(name = "Orders", description = "APIs for creating and managing customer orders")
 public class OrderController {
     private final OrderService orderService;
 
+    @Operation(summary = "Create order", description = "Creates a new order from the authenticated user's cart and initiates the selected payment method.")
     @PostMapping
     public ResponseEntity<ApiSuccessResponse<OrderResponse>> createOrder(
             @Valid @RequestBody CreateOrderRequest request, Authentication authentication,
@@ -34,7 +38,7 @@ public class OrderController {
         return ResponseEntity.ok(
                 ApiSuccessResponse.<OrderResponse>builder()
                         .success(true)
-                        .message("Order created successfully")
+                        .message("Order created successfully.")
                         .data(response)
                         .path(httpRequest.getRequestURI())
                         .build()
