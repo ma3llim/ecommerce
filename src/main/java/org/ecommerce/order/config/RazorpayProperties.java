@@ -14,6 +14,9 @@ public record RazorpayProperties(
         String keySecret,
 
         @NotBlank
-        String webhookSecret
+        String webhookSecret,
+
+        @NotBlank
+        String currency
 ) {
 }

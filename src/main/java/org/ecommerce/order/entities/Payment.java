@@ -35,6 +35,9 @@ public class Payment {
     @Column(name = "transaction_id", unique = true)
     private String transactionId;
 
+    @Column(nullable = false, length = 3)
+    private String currency;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", nullable = false)
     private PaymentMethod paymentMethod;

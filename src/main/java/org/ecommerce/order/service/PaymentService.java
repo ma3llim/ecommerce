@@ -44,7 +44,7 @@ public class PaymentService {
         JSONObject options = new JSONObject();
 
         options.put("amount", amount.setScale(2, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100)));
-        options.put("currency", "INR");
+        options.put("currency", razorpayProperties.currency());
         options.put("receipt", orderId.toString());
 
         log.info("options: {}", options);
@@ -183,6 +183,7 @@ public class PaymentService {
 
         payment.setRazorpayOrderId(razorpayOrderId);
         payment.setPaymentStatus(PaymentStatus.PENDING);
+        payment.setCurrency(razorpayProperties.currency());
 
         paymentRepository.save(payment);
 
