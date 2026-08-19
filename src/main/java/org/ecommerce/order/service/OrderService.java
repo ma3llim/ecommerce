@@ -11,6 +11,7 @@ import org.ecommerce.cart.entities.CartItem;
 import org.ecommerce.cart.repository.CartItemRepository;
 import org.ecommerce.cart.repository.CartRepository;
 import org.ecommerce.cart.repository.projection.CartOrderItemProjection;
+import org.ecommerce.catelog.repository.ProductVariantRepository;
 import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.enums.DiscountType;
 import org.ecommerce.common.exception.BadRequestException;
@@ -59,6 +60,7 @@ public class OrderService {
     private final PaymentRepository paymentRepository;
     private final ObjectMapper objectMapper;
     private final PaymentService paymentService;
+    private final ProductVariantRepository productVariantRepository;
     private final OrderFinalizationService orderFinalizationService;
 
 
@@ -329,5 +331,38 @@ public class OrderService {
                 .payment(paymentResponse)
                 .shippingAddress(shippingAddressResponse)
                 .build();
+    }
+
+    @Transactional
+    public OrderResponse cancelOrder(UUID orderId, Authentication authentication) {
+        UUID userId = ((User) authentication.getPrincipal()).getId();
+
+        Order order = orderRepository.findByIdAndUserId(orderId, userId).orElseThrow(() ->
+                new ResourceNotFoundException("Order not found")
+        );
+
+        if (order.getOrderStatus() != OrderStatus.PENDING && order.getOrderStatus() != OrderStatus.CONFIRMED) {
+            throw new BadRequestException("Order cannot be cancelled at this stage");
+        }
+
+        Payment payment = paymentRepository.findByOrderId(order.getId()).orElseThrow(() ->
+                new ResourceNotFoundException("Payment not found")
+        );
+
+        if (payment.getPaymentStatus() == PaymentStatus.CAPTURED) {
+            paymentService.refundPayment(payment);
+        }
+
+        int updatedRows = productVariantRepository.restoreStock(order.getId());
+
+        if (updatedRows == 0) {
+            throw new BadRequestException("Unable to restore stock");
+        }
+
+        order.setOrderStatus(OrderStatus.CANCELLED);
+
+        orderRepository.save(order);
+
+        return objectMapper.convertValue(order, OrderResponse.class);
     }
 }

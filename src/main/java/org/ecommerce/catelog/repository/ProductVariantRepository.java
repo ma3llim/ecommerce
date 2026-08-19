@@ -37,4 +37,13 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
                       AND pv.id = oi.product_variant_id
             """, nativeQuery = true)
     int reduceStock(@Param("orderId") UUID orderId);
+
+    @Query(value = """
+            UPDATE product_variants pv
+                    SET stock_quantity = stock_quantity + oi.quantity
+                    FROM order_items oi
+                    WHERE oi.order_id = :orderId
+                      AND pv.id = oi.product_variant_id
+            """, nativeQuery = true)
+    int restoreStock(UUID id);
 }

@@ -104,4 +104,7 @@ public class PaymentService {
         }
         log.info("Razorpay webhook processed successfully. event={}, razorpayOrderId={}", event, razorpayOrderId);
     }
+
+    public void refundPayment(Payment payment) {
+    }
 }

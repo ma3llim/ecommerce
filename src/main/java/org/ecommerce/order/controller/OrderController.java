@@ -83,21 +83,21 @@ public class OrderController {
                         .build()
         );
     }
-//
-//    @PatchMapping("/{orderId}")
-//    public ResponseEntity<ApiSuccessResponse<OrderResponse>> cancelOrder(
-//            @PathVariable UUID orderId, Authentication authentication,
-//            HttpServletRequest httpRequest
-//    ) {
-//        OrderResponse pageResponse = orderService.getOrderDetail(orderId, authentication);
-//
-//        return ResponseEntity.ok(
-//                ApiSuccessResponse.<OrderResponse>builder()
-//                        .success(true)
-//                        .message("Order retried successfully.")
-//                        .data(pageResponse)
-//                        .path(httpRequest.getRequestURI())
-//                        .build()
-//        );
-//    }
+
+    @PatchMapping("/{orderId}/cancel")
+    public ResponseEntity<ApiSuccessResponse<OrderResponse>> cancelOrder(
+            @PathVariable UUID orderId, Authentication authentication,
+            HttpServletRequest httpRequest
+    ) {
+        OrderResponse response = orderService.cancelOrder(orderId, authentication);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<OrderResponse>builder()
+                        .success(true)
+                        .message("Order cancelled successfully")
+                        .data(response)
+                        .path(httpRequest.getRequestURI())
+                        .build()
+        );
+    }
 }
