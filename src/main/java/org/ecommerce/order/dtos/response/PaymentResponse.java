@@ -1,5 +1,6 @@
 package org.ecommerce.order.dtos.response;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.Builder;
 import org.ecommerce.order.enums.PaymentMethod;
 import org.ecommerce.order.enums.PaymentStatus;
@@ -9,7 +10,8 @@ import java.util.UUID;
 
 @Builder
 public record PaymentResponse(
-        UUID id,
+        @JsonAlias("id")
+        UUID paymentId,
         String razorpayOrderId,
         BigDecimal amount,
         String currency,

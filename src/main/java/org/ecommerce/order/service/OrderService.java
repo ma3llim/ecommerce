@@ -11,14 +11,14 @@ import org.ecommerce.cart.entities.CartItem;
 import org.ecommerce.cart.repository.CartItemRepository;
 import org.ecommerce.cart.repository.CartRepository;
 import org.ecommerce.cart.repository.projection.CartOrderItemProjection;
+import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.enums.DiscountType;
 import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
 import org.ecommerce.coupon.entities.Coupon;
 import org.ecommerce.coupon.repository.CouponRepository;
 import org.ecommerce.order.dtos.request.CreateOrderRequest;
-import org.ecommerce.order.dtos.response.OrderResponse;
-import org.ecommerce.order.dtos.response.PaymentResponse;
+import org.ecommerce.order.dtos.response.*;
 import org.ecommerce.order.entities.Order;
 import org.ecommerce.order.entities.OrderItem;
 import org.ecommerce.order.entities.Payment;
@@ -30,6 +30,8 @@ import org.ecommerce.order.repository.OrderRepository;
 import org.ecommerce.order.repository.PaymentRepository;
 import org.ecommerce.user.entity.UserAddress;
 import org.ecommerce.user.repository.UserAddressRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -229,7 +231,7 @@ public class OrderService {
                 shippingAmount, taxAmount, totalAmount);
 
         return OrderResponse.builder()
-                .id(order.getId())
+                .orderId(order.getId())
                 .orderNumber(order.getOrderNumber())
                 .subtotal(subTotal)
                 .shippingAmount(order.getShippingAmount())
@@ -253,5 +255,79 @@ public class OrderService {
                 .toUpperCase();
 
         return "ORD-" + date + "-" + random;
+    }
+
+    public PageResponse<OrderListResponse> getOrders(Pageable pageable, Authentication authentication) {
+        UUID userId = ((User) authentication.getPrincipal()).getId();
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("get orders failed: user not found, userId={}", userId);
+            return new ResourceNotFoundException("User not found");
+        });
+
+        Page<Order> orders = orderRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
+
+        Page<OrderListResponse> orderResponses = orders.map(order ->
+                objectMapper.convertValue(order, OrderListResponse.class));
+
+        return new PageResponse<>(
+                orderResponses.getContent(),
+                orderResponses.getNumber(),
+                orderResponses.getSize(),
+                orderResponses.getTotalElements(),
+                orderResponses.getTotalPages(),
+                orderResponses.isFirst(),
+                orderResponses.isLast()
+        );
+    }
+
+    public OrderDetailResponse getOrderDetail(UUID orderId, Authentication authentication) {
+        UUID userId = ((User) authentication.getPrincipal()).getId();
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("Get order details failed: user not found, userId={}", userId);
+            return new ResourceNotFoundException("User not found");
+        });
+
+        Order order = orderRepository.findByIdAndUserId(orderId, user.getId()).orElseThrow(() -> {
+            log.warn("Get order details failed: order not found, orderId={}, userId={}", orderId, userId);
+            return new ResourceNotFoundException("Order not found");
+        });
+
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+
+        List<OrderItemResponse> orderItemResponses = orderItems.stream().map(orderItem ->
+                objectMapper.convertValue(orderItem, OrderItemResponse.class)).toList();
+
+        Payment payment = paymentRepository.findByOrderId(order.getId()).orElseThrow(() ->
+                new ResourceNotFoundException("Payment not found")
+        );
+        PaymentResponse paymentResponse = objectMapper.convertValue(payment, PaymentResponse.class);
+
+        // TODO: added shipping response
+
+        UserAddress shippingAddress = userAddressRepository.findByUserIdAndId(userId, order.getShippingAddressId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Shipping address not found")
+                );
+
+        AddressResponse shippingAddressResponse = objectMapper.convertValue(shippingAddress, AddressResponse.class);
+
+        return OrderDetailResponse.builder()
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .subtotal(order.getTotalAmount()
+                        .subtract(order.getShippingAmount())
+                        .subtract(order.getTaxAmount())
+                        .add(order.getDiscountAmount())
+                )
+                .shippingAmount(order.getShippingAmount())
+                .discountAmount(order.getDiscountAmount())
+                .taxAmount(order.getTaxAmount())
+                .totalAmount(order.getTotalAmount())
+                .paymentStatus(order.getPaymentStatus())
+                .orderStatus(order.getOrderStatus())
+                .items(orderItemResponses)
+                .payment(paymentResponse)
+                .shippingAddress(shippingAddressResponse)
+                .build();
     }
 }

@@ -6,17 +6,22 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.response.ApiSuccessResponse;
 import org.ecommerce.order.dtos.request.CreateOrderRequest;
+import org.ecommerce.order.dtos.response.OrderDetailResponse;
+import org.ecommerce.order.dtos.response.OrderListResponse;
 import org.ecommerce.order.dtos.response.OrderResponse;
 import org.ecommerce.order.service.OrderService;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @PreAuthorize("hasRole('USER')")
@@ -44,4 +49,55 @@ public class OrderController {
                         .build()
         );
     }
+
+    @GetMapping
+    public ResponseEntity<ApiSuccessResponse<PageResponse<OrderListResponse>>> getOrders(
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+        PageResponse<OrderListResponse> pageResponse = orderService.getOrders(pageable, authentication);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<PageResponse<OrderListResponse>>builder()
+                        .success(true)
+                        .message("Orders retried successfully.")
+                        .data(pageResponse)
+                        .path(httpRequest.getRequestURI())
+                        .build()
+        );
+    }
+
+    @GetMapping("/{orderId}")
+    public ResponseEntity<ApiSuccessResponse<OrderDetailResponse>> getOrderDetail(
+            @PathVariable UUID orderId, Authentication authentication,
+            HttpServletRequest httpRequest
+    ) {
+        OrderDetailResponse orderDetail = orderService.getOrderDetail(orderId, authentication);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<OrderDetailResponse>builder()
+                        .success(true)
+                        .message("Order details retried successfully.")
+                        .data(orderDetail)
+                        .path(httpRequest.getRequestURI())
+                        .build()
+        );
+    }
+//
+//    @PatchMapping("/{orderId}")
+//    public ResponseEntity<ApiSuccessResponse<OrderResponse>> cancelOrder(
+//            @PathVariable UUID orderId, Authentication authentication,
+//            HttpServletRequest httpRequest
+//    ) {
+//        OrderResponse pageResponse = orderService.getOrderDetail(orderId, authentication);
+//
+//        return ResponseEntity.ok(
+//                ApiSuccessResponse.<OrderResponse>builder()
+//                        .success(true)
+//                        .message("Order retried successfully.")
+//                        .data(pageResponse)
+//                        .path(httpRequest.getRequestURI())
+//                        .build()
+//        );
+//    }
 }

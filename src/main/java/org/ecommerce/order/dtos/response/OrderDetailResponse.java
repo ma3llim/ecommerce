@@ -6,10 +6,11 @@ import org.ecommerce.order.enums.OrderStatus;
 import org.ecommerce.order.enums.PaymentStatus;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Builder
-public record OrderResponse(
+public record OrderDetailResponse(
         @JsonAlias("id")
         UUID orderId,
         String orderNumber,
@@ -18,10 +19,10 @@ public record OrderResponse(
         BigDecimal discountAmount,
         BigDecimal taxAmount,
         BigDecimal totalAmount,
-        UUID couponId,
-        String couponCode,
         PaymentStatus paymentStatus,
         OrderStatus orderStatus,
-        PaymentResponse payment
+        List<OrderItemResponse> items,
+        PaymentResponse payment,
+        AddressResponse shippingAddress
 ) {
 }
