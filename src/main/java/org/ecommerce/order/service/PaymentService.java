@@ -2,9 +2,11 @@ package org.ecommerce.order.service;
 
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
+import com.razorpay.Refund;
 import com.razorpay.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ExternalServiceException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
 import org.ecommerce.order.config.RazorpayProperties;
@@ -106,5 +108,25 @@ public class PaymentService {
     }
 
     public void refundPayment(Payment payment) {
+        if (payment.getTransactionId() == null) {
+            throw new BadRequestException("Cannot refund payment: transaction ID not found");
+        }
+
+        if (payment.getPaymentStatus() != PaymentStatus.CAPTURED) {
+            throw new BadRequestException("Payment is not eligible for refund");
+        }
+
+        try {
+            Refund refund = razorpayClient.payments.refund(payment.getTransactionId());
+
+            log.info("Razorpay refund created successfully. paymentId={}, refundId={}",
+                    payment.getTransactionId(), refund.get("id"));
+
+            payment.setPaymentStatus(PaymentStatus.REFUNDED);
+            paymentRepository.save(payment);
+        } catch (RazorpayException e) {
+            log.error("Razorpay refund failed. paymentId={}", payment.getTransactionId(), e);
+            throw new ExternalServiceException("Unable to process payment refund");
+        }
     }
 }
