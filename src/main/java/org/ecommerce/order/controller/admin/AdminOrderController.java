@@ -3,7 +3,6 @@ package org.ecommerce.order.controller.admin;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.response.ApiSuccessResponse;
 import org.ecommerce.order.dtos.admin.request.UpdateOrderStatusRequest;
@@ -22,7 +21,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/admin/orders")
 @RequiredArgsConstructor
-@Slf4j
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminOrderController {
     private final AdminOrderService adminOrderService;

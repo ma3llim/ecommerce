@@ -26,10 +26,10 @@ public class Shipment {
     @Column(name = "order_id", nullable = false)
     private UUID orderId;
 
-    @Column(name = "courier_name")
+    @Column(name = "courier_name", nullable = false)
     private String courierName;
 
-    @Column(name = "tracking_number", unique = true)
+    @Column(name = "tracking_number", nullable = false, unique = true)
     private String trackingNumber;
 
     @Enumerated(EnumType.STRING)
