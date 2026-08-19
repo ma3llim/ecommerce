@@ -1,6 +1,7 @@
 package org.ecommerce.order.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.razorpay.RazorpayException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.entities.User;
@@ -22,6 +23,7 @@ import org.ecommerce.order.entities.Order;
 import org.ecommerce.order.entities.OrderItem;
 import org.ecommerce.order.entities.Payment;
 import org.ecommerce.order.enums.OrderStatus;
+import org.ecommerce.order.enums.PaymentMethod;
 import org.ecommerce.order.enums.PaymentStatus;
 import org.ecommerce.order.repository.OrderItemRepository;
 import org.ecommerce.order.repository.OrderRepository;
@@ -54,9 +56,12 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final PaymentRepository paymentRepository;
     private final ObjectMapper objectMapper;
+    private final PaymentService paymentService;
+    private final OrderFinalizationService orderFinalizationService;
+
 
     @Transactional
-    public OrderResponse createOrder(CreateOrderRequest request, Authentication authentication) {
+    public OrderResponse createOrder(CreateOrderRequest request, Authentication authentication) throws RazorpayException {
         UUID userId = ((User) authentication.getPrincipal()).getId();
         User user = userRepository.findById(userId).orElseThrow(() -> {
             log.warn("Create order failed: user not found, userId={}", userId);
@@ -75,18 +80,27 @@ public class OrderService {
 
         List<CartItem> cartItems = cartItemRepository.findByCartId(cart.getId());
         if (cartItems.isEmpty()) {
-            throw new BadRequestException("Cart is empty");
+            log.warn("Create order rejected: cart is empty. userId={}, cartId={}", userId, cart.getId());
+            throw new BadRequestException("Cannot create order from an empty cart");
         }
 
         List<CartOrderItemProjection> items = cartItemRepository.findOrderItemsByCartId(cart.getId());
 
         if (items.size() != cartItems.size()) {
-            throw new BadRequestException("One or more products are no longer available");
+            log.warn("Create order rejected: one or more cart items are unavailable. userId={}, cartId={}, " +
+                    "cartItems={}, availableItems={}", userId, cart.getId(), cartItems.size(), items.size());
+            throw new BadRequestException("One or more products in your cart are no longer available");
         }
 
         BigDecimal subTotal = BigDecimal.ZERO;
         for (CartOrderItemProjection item : items) {
             if (item.getQuantity() > item.getStockQuantity()) {
+                log.warn(
+                        "Create order rejected: insufficient stock. userId={}, productId={}, variantId={}, " +
+                                "productName={}, requestedQuantity={}, availableStock={}",
+                        userId, item.getProductId(), item.getProductVariantId(), item.getProductName(),
+                        item.getQuantity(), item.getStockQuantity());
+
                 throw new BadRequestException("Insufficient stock for product: " + item.getProductName());
             }
 
@@ -98,8 +112,13 @@ public class OrderService {
         BigDecimal discountAmount = BigDecimal.ZERO;
 
         if (request.couponCode() != null && !request.couponCode().isBlank()) {
-            coupon = couponRepository.findByCodeIgnoreCaseAndActiveTrue(request.couponCode().trim()).orElseThrow(() ->
-                    new ResourceNotFoundException("Coupon not found"));
+            String couponCode = request.couponCode().trim();
+
+            coupon = couponRepository.findByCodeIgnoreCaseAndActiveTrue(couponCode).orElseThrow(() -> {
+                log.warn("Create order rejected: coupon not found or inactive. couponCode={}, userId={}",
+                        couponCode, userId);
+                return new ResourceNotFoundException("Coupon not found or inactive");
+            });
 
             Instant now = Instant.now();
 
@@ -138,8 +157,8 @@ public class OrderService {
 
         BigDecimal shippingAmount = new BigDecimal("40");
 
-        BigDecimal taxableAmount = subTotal.subtract(discountAmount).subtract(shippingAmount);
-        BigDecimal taxAmount = taxableAmount.multiply(new BigDecimal(("0.18")).setScale(2, RoundingMode.HALF_UP));
+        BigDecimal taxableAmount = subTotal.subtract(discountAmount);
+        BigDecimal taxAmount = taxableAmount.multiply(new BigDecimal("0.18")).setScale(2, RoundingMode.HALF_UP);
 
         BigDecimal totalAmount = taxableAmount.add(shippingAmount).add(taxAmount);
 
@@ -159,6 +178,7 @@ public class OrderService {
         order = orderRepository.save(order);
 
         List<OrderItem> orderItems = new ArrayList<>();
+
         for (CartOrderItemProjection item : items) {
             BigDecimal itemTotal = item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
 
@@ -167,6 +187,7 @@ public class OrderService {
                     .productId(item.getProductId())
                     .productVariantId(item.getProductVariantId())
                     .productName(item.getProductName())
+                    .variantName(item.getSku())
                     .quantity(item.getQuantity())
                     .unitPrice(item.getUnitPrice())
                     .totalPrice(itemTotal)
@@ -184,14 +205,33 @@ public class OrderService {
                 .paymentStatus(PaymentStatus.PENDING)
                 .build();
 
+        if (request.paymentMethod() != PaymentMethod.COD) {
+            String razorpayOrderId = paymentService.createRazorpayOrder(order.getId(), totalAmount);
+            payment.setRazorpayOrderId(razorpayOrderId);
+
+            log.info("Razorpay order created successfully. orderId={}, razorpayOrderId={}, amount={}",
+                    order.getId(), razorpayOrderId, totalAmount);
+        }
         payment = paymentRepository.save(payment);
 
+        if (request.paymentMethod() == PaymentMethod.COD) {
+            orderFinalizationService.finalizeOrder(order);
+
+            log.info("COD order finalized successfully. orderId={}, orderNumber={}",
+                    order.getId(), order.getOrderNumber());
+        }
+
         PaymentResponse paymentResponse = objectMapper.convertValue(payment, PaymentResponse.class);
+        
+        log.info("Order created successfully. orderId={}, orderNumber={}, userId={}, paymentMethod={}, subtotal={}, " +
+                        "discount={}, shipping={}, tax={}, total={}",
+                order.getId(), order.getOrderNumber(), userId, request.paymentMethod(), subTotal, discountAmount,
+                shippingAmount, taxAmount, totalAmount);
 
         return OrderResponse.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
-                .subtotal(taxableAmount)
+                .subtotal(subTotal)
                 .shippingAmount(order.getShippingAmount())
                 .discountAmount(order.getDiscountAmount())
                 .taxAmount(order.getTaxAmount())
@@ -203,6 +243,7 @@ public class OrderService {
                 .payment(paymentResponse)
                 .build();
     }
+
 
     private String generateOrderNumber() {
         String date = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);

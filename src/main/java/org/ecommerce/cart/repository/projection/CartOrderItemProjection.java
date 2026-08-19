@@ -17,4 +17,6 @@ public interface CartOrderItemProjection {
     Integer getStockQuantity();
 
     Integer getQuantity();
+
+    String getSku();
 }

@@ -1,5 +1,6 @@
 package org.ecommerce.order.controller;
 
+import com.razorpay.RazorpayException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,7 @@ public class OrderController {
     public ResponseEntity<ApiSuccessResponse<OrderResponse>> createOrder(
             @Valid @RequestBody CreateOrderRequest request, Authentication authentication,
             HttpServletRequest httpRequest
-    ) {
+    ) throws RazorpayException {
 
         OrderResponse response = orderService.createOrder(request, authentication);
 

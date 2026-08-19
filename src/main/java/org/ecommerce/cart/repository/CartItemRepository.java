@@ -27,7 +27,8 @@ public interface CartItemRepository extends JpaRepository<CartItem, UUID> {
                 p.name AS productName,
                 pv.price AS unitPrice,
                 pv.stock_quantity AS stockQuantity,
-                ci.quantity AS quantity
+                ci.quantity AS quantity,
+                pv.sku AS sku
             FROM cart_items ci
             INNER JOIN product_variants pv
                 ON pv.id = ci.product_variant_id

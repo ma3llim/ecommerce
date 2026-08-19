@@ -26,13 +26,13 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "order_id", nullable = false)
+    @Column(name = "order_id", nullable = false, unique = true)
     private UUID orderId;
 
     @Column(name = "razorpay_order_id", unique = true)
     private String razorpayOrderId;
-    
-    @Column(name = "transaction_id", nullable = false, unique = true)
+
+    @Column(name = "transaction_id", unique = true)
     private String transactionId;
 
     @Enumerated(EnumType.STRING)
