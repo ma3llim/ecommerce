@@ -2,10 +2,17 @@ package org.ecommerce.order.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.ecommerce.common.response.ApiSuccessResponse;
+import org.ecommerce.order.dtos.response.PaymentResponse;
 import org.ecommerce.order.service.PaymentService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/payments")
@@ -23,5 +30,22 @@ public class PaymentController {
         paymentService.handleWebhook(payload, signature);
 
         return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasRole('USER')")
+    @PostMapping("/{orderId}/payments")
+    public ResponseEntity<ApiSuccessResponse<PaymentResponse>> initiatePayment(
+            @PathVariable UUID orderId, Authentication authentication, HttpServletRequest request
+    ) {
+        PaymentResponse response = paymentService.initiatePayment(orderId, authentication);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<PaymentResponse>builder()
+                        .success(true)
+                        .message("Payment initiated successfully")
+                        .data(response)
+                        .path(request.getRequestURI())
+                        .build()
+        );
     }
 }

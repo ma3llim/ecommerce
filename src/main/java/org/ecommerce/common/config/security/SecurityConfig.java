@@ -45,6 +45,7 @@ public class SecurityConfig {
                                         SecurityConstants.AUTH_RESET_PASSWORD,
                                         SecurityConstants.CATEGORY_LISTING,
                                         SecurityConstants.PRODUCT_LISTING,
+                                        SecurityConstants.RAZORPAY_WEBHOOK,
                                         SecurityConstants.SWAGGER_UI,
                                         SecurityConstants.SWAGGER_UI_RESOURCES,
                                         SecurityConstants.OPEN_API_DOCS

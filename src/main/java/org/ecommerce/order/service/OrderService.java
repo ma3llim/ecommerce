@@ -63,7 +63,6 @@ public class OrderService {
     private final ProductVariantRepository productVariantRepository;
     private final OrderFinalizationService orderFinalizationService;
 
-
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request, Authentication authentication) throws RazorpayException {
         UUID userId = ((User) authentication.getPrincipal()).getId();
@@ -209,20 +208,12 @@ public class OrderService {
                 .paymentStatus(PaymentStatus.PENDING)
                 .build();
 
-        if (request.paymentMethod() != PaymentMethod.COD) {
-            String razorpayOrderId = paymentService.createRazorpayOrder(order.getId(), totalAmount);
-            payment.setRazorpayOrderId(razorpayOrderId);
-
-            log.info("Razorpay order created successfully. orderId={}, razorpayOrderId={}, amount={}",
-                    order.getId(), razorpayOrderId, totalAmount);
-        }
         payment = paymentRepository.save(payment);
 
         if (request.paymentMethod() == PaymentMethod.COD) {
             orderFinalizationService.finalizeOrder(order);
 
-            log.info("COD order finalized successfully. orderId={}, orderNumber={}",
-                    order.getId(), order.getOrderNumber());
+            log.info("COD order finalized successfully. orderId={}, orderNumber={}", order.getId(), order.getOrderNumber());
         }
 
         PaymentResponse paymentResponse = objectMapper.convertValue(payment, PaymentResponse.class);

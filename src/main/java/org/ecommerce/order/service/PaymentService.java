@@ -1,21 +1,27 @@
 package org.ecommerce.order.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.razorpay.Refund;
 import com.razorpay.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ecommerce.auth.entities.User;
 import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ExternalServiceException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
 import org.ecommerce.order.config.RazorpayProperties;
+import org.ecommerce.order.dtos.response.PaymentResponse;
 import org.ecommerce.order.entities.Order;
 import org.ecommerce.order.entities.Payment;
+import org.ecommerce.order.enums.OrderStatus;
+import org.ecommerce.order.enums.PaymentMethod;
 import org.ecommerce.order.enums.PaymentStatus;
 import org.ecommerce.order.repository.OrderRepository;
 import org.ecommerce.order.repository.PaymentRepository;
 import org.json.JSONObject;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,8 +38,9 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final OrderFinalizationService orderFinalizationService;
+    private final ObjectMapper objectMapper;
 
-    public String createRazorpayOrder(UUID orderId, BigDecimal amount) throws RazorpayException {
+    public String createRazorpayOrder(UUID orderId, BigDecimal amount) {
         JSONObject options = new JSONObject();
 
         options.put("amount", amount.setScale(2, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100)));
@@ -41,10 +48,14 @@ public class PaymentService {
         options.put("receipt", orderId.toString());
 
         log.info("options: {}", options);
-        com.razorpay.Order razorpayOrder = razorpayClient.orders.create(options);
-
-        log.info("razorpayOrder: {}", razorpayOrder);
-        return razorpayOrder.get("id");
+        try {
+            com.razorpay.Order razorpayOrder = razorpayClient.orders.create(options);
+            log.info("razorpayOrder: {}", razorpayOrder);
+            return razorpayOrder.get("id");
+        } catch (RazorpayException e) {
+            log.error("Failed to create Razorpay order: orderId={}, amount={}", orderId, amount, e);
+            throw new ExternalServiceException("Unable to create Razorpay order");
+        }
     }
 
     @Transactional
@@ -57,10 +68,8 @@ public class PaymentService {
         }
 
         JSONObject webhook = new JSONObject(payload);
-        log.info("webhook: {}", webhook);
 
         String event = webhook.getString("event");
-        log.info("event: {}", event);
 
         if (!event.equals("payment.captured") && !event.equals("payment.failed")) {
             log.info("Ignoring unsupported Razorpay event: {}", event);
@@ -70,12 +79,9 @@ public class PaymentService {
         // Razorpay order ID
         JSONObject paymentEntity = webhook.getJSONObject("payload").getJSONObject("payment")
                 .getJSONObject("entity");
-        log.info("paymentEntity: {}", paymentEntity);
 
         String razorpayPaymentId = paymentEntity.getString("id");
         String razorpayOrderId = paymentEntity.getString("order_id");
-        log.info("razorpayPaymentId: {}", razorpayPaymentId);
-        log.info("razorpayOrderId :{}", razorpayOrderId);
 
         Payment payment = paymentRepository.findByRazorpayOrderId(razorpayOrderId).orElseThrow(() ->
                 new ResourceNotFoundException("Payment not found"));
@@ -128,5 +134,61 @@ public class PaymentService {
             log.error("Razorpay refund failed. paymentId={}", payment.getTransactionId(), e);
             throw new ExternalServiceException("Unable to process payment refund");
         }
+    }
+
+    public PaymentResponse initiatePayment(UUID orderId, Authentication authentication) {
+        UUID userId = ((User) authentication.getPrincipal()).getId();
+
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> {
+            log.warn("Payment initiation failed: order not found, orderId={}", orderId);
+            return new ResourceNotFoundException("Order not found");
+        });
+
+        if (!order.getUserId().equals(userId)) {
+            log.warn("Unauthorized payment attempt: orderId={}, userId={}", orderId, userId);
+            throw new BadRequestException("You are not allowed to pay for this order");
+        }
+
+        if (order.getPaymentStatus() == PaymentStatus.SUCCESS) {
+            throw new BadRequestException("Order has already been paid");
+        }
+
+        if (order.getOrderStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Cancelled order cannot be paid");
+        }
+
+        if (order.getOrderStatus() == OrderStatus.DELIVERED) {
+            throw new BadRequestException("Delivered order cannot be paid");
+        }
+
+        Payment payment = paymentRepository.findByOrderId(order.getId()).orElseThrow(() -> {
+            log.warn("Payment record not found: orderId={}", orderId);
+            return new ResourceNotFoundException("Payment record not found");
+        });
+
+        if (payment.getPaymentMethod() == PaymentMethod.COD) {
+            throw new BadRequestException("COD payment does not require online payment");
+        }
+
+        if (payment.getRazorpayOrderId() != null) {
+            log.info("Existing Razorpay order found: orderId={}, razorpayOrderId={}",
+                    orderId, payment.getRazorpayOrderId());
+
+            return objectMapper.convertValue(payment, PaymentResponse.class);
+        }
+
+        BigDecimal amount = order.getTotalAmount();
+
+        String razorpayOrderId = createRazorpayOrder(order.getId(), amount);
+
+        payment.setRazorpayOrderId(razorpayOrderId);
+        payment.setPaymentStatus(PaymentStatus.PENDING);
+
+        paymentRepository.save(payment);
+
+        log.info("Razorpay payment initiated: orderId={}, razorpayOrderId={}, amount={}",
+                orderId, razorpayOrderId, amount);
+
+        return objectMapper.convertValue(payment, PaymentResponse.class);
     }
 }
