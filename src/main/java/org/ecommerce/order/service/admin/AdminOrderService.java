@@ -3,10 +3,17 @@ package org.ecommerce.order.service.admin;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ecommerce.auth.entities.User;
+import org.ecommerce.auth.repository.UserRepository;
 import org.ecommerce.catelog.repository.ProductVariantRepository;
 import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
+import org.ecommerce.common.notification.dtos.NotificationRequest;
+import org.ecommerce.common.notification.enums.channel.NotificationChannel;
+import org.ecommerce.common.notification.enums.channel.NotificationEvent;
+import org.ecommerce.common.notification.service.NotificationService;
+import org.ecommerce.common.utils.DateTimeUtil;
 import org.ecommerce.order.dtos.response.*;
 import org.ecommerce.order.entities.Order;
 import org.ecommerce.order.entities.OrderItem;
@@ -25,7 +32,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -39,6 +49,8 @@ public class AdminOrderService {
     private final ObjectMapper objectMapper;
     private final PaymentService paymentService;
     private final ProductVariantRepository productVariantRepository;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     public PageResponse<OrderResponse> getAllOrders(String search, String orderStatus, String paymentStatus, Pageable pageable) {
         OrderStatus status = null;
@@ -164,6 +176,11 @@ public class AdminOrderService {
             return new ResourceNotFoundException("Order not found");
         });
 
+        User user = userRepository.findById(order.getUserId()).orElseThrow(() -> {
+            log.warn("Cancel order failed: user not found. orderId={}, userId={}", orderId, order.getUserId());
+            return new ResourceNotFoundException("User not found");
+        });
+
         if (order.getOrderStatus() != OrderStatus.PENDING && order.getOrderStatus() != OrderStatus.CONFIRMED) {
             log.warn("Order cancellation rejected: orderId={}, status={}", orderId, order.getOrderStatus());
             throw new BadRequestException("Order cannot be cancelled at this stage");
@@ -194,6 +211,29 @@ public class AdminOrderService {
 
         orderRepository.save(order);
 
+        sendOrderCancelledMail(user.getFullName(), order.getOrderNumber(), order.getTotalAmount(), Instant.now(),
+                user.getEmail());
+
         return objectMapper.convertValue(order, OrderResponse.class);
+    }
+
+    public void sendOrderCancelledMail(
+            String fullName, String orderNumber, BigDecimal amount, Instant cancelledAt, String recipientEmail
+    ) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("customerName", fullName);
+        data.put("orderNumber", orderNumber);
+        data.put("amount", amount);
+        data.put("cancellationReason", "Order cancelled by administrator");
+        data.put("paidAt", DateTimeUtil.format(cancelledAt));
+
+        NotificationRequest request = NotificationRequest.builder()
+                .channel(NotificationChannel.EMAIL)
+                .event(NotificationEvent.ORDER_CANCELLED)
+                .recipient(recipientEmail)
+                .data(data)
+                .build();
+
+        notificationService.send(request);
     }
 }

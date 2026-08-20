@@ -20,6 +20,7 @@ import org.ecommerce.common.notification.dtos.OrderItemEmailData;
 import org.ecommerce.common.notification.enums.channel.NotificationChannel;
 import org.ecommerce.common.notification.enums.channel.NotificationEvent;
 import org.ecommerce.common.notification.service.NotificationService;
+import org.ecommerce.common.utils.DateTimeUtil;
 import org.ecommerce.coupon.entities.Coupon;
 import org.ecommerce.coupon.repository.CouponRepository;
 import org.ecommerce.order.dtos.request.CreateOrderRequest;
@@ -355,6 +356,10 @@ public class OrderService {
     @Transactional
     public OrderResponse cancelOrder(UUID orderId, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("Cancel order failed: user not found. orderId={}, userId={}", orderId, userId);
+            return new ResourceNotFoundException("User not found");
+        });
 
         Order order = orderRepository.findByIdAndUserId(orderId, userId).orElseThrow(() -> {
             log.warn("Cancel order failed: order not found. orderId={}, userId={}", orderId, userId);
@@ -386,6 +391,8 @@ public class OrderService {
 
         orderRepository.save(order);
 
+        sendOrderCancelledMail(user.getFullName(), order.getOrderNumber(), order.getTotalAmount(), Instant.now(), user.getEmail());
+        
         return objectMapper.convertValue(order, OrderResponse.class);
     }
 
@@ -409,6 +416,26 @@ public class OrderService {
         NotificationRequest request = NotificationRequest.builder()
                 .channel(NotificationChannel.EMAIL)
                 .event(NotificationEvent.ORDER_PLACED)
+                .recipient(recipientEmail)
+                .data(data)
+                .build();
+
+        notificationService.send(request);
+    }
+
+    public void sendOrderCancelledMail(
+            String fullName, String orderNumber, BigDecimal amount, Instant cancelledAt, String recipientEmail
+    ) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("customerName", fullName);
+        data.put("orderNumber", orderNumber);
+        data.put("amount", amount);
+        data.put("cancellationReason", "Order cancelled by customer");
+        data.put("paidAt", DateTimeUtil.format(cancelledAt));
+
+        NotificationRequest request = NotificationRequest.builder()
+                .channel(NotificationChannel.EMAIL)
+                .event(NotificationEvent.ORDER_CANCELLED)
                 .recipient(recipientEmail)
                 .data(data)
                 .build();
