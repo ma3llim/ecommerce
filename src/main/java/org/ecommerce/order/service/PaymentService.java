@@ -174,14 +174,32 @@ public class PaymentService {
             throw new BadRequestException("Payment is not eligible for refund");
         }
 
+        Order order = orderRepository.findById(payment.getOrderId()).orElseThrow(() -> {
+            log.warn("Payment refund rejected: order is not found. orderId:{}", payment.getOrderId());
+            return new BadRequestException("Order is not found");
+        });
+
+        User user = userRepository.findById(order.getUserId()).orElseThrow(() -> {
+            log.warn("Payment refund rejected: user is not found. orderId:{}, userId: {}",
+                    payment.getOrderId(), order.getUserId());
+            return new BadRequestException("Order is not found");
+        });
+
         try {
             Refund refund = razorpayClient.payments.refund(payment.getTransactionId());
-
+            String refundId = refund.get("id");
             log.info("Razorpay refund created successfully. paymentId={}, refundId={}",
-                    payment.getTransactionId(), refund.get("id"));
+                    payment.getTransactionId(), refundId);
+
+            Instant now = Instant.now();
 
             payment.setPaymentStatus(PaymentStatus.REFUNDED);
+            payment.setRefundId(refundId);
+            payment.setRefundAt(now);
+
             paymentRepository.save(payment);
+
+            sendRefundedMail(user.getFullName(), order.getOrderNumber(), refundId, order.getTotalAmount(), Instant.now(), user.getEmail()));
         } catch (RazorpayException e) {
             log.error("Razorpay refund failed. transactionId={}, paymentId={}",
                     payment.getTransactionId(), payment.getId(), e);
@@ -285,6 +303,27 @@ public class PaymentService {
         NotificationRequest request = NotificationRequest.builder()
                 .channel(NotificationChannel.EMAIL)
                 .event(NotificationEvent.PAYMENT_FAILED)
+                .recipient(recipientEmail)
+                .data(data)
+                .build();
+
+        notificationService.send(request);
+    }
+
+    public void sendRefundedMail(
+            String fullName, String orderNumber, String refundId, BigDecimal refundAmount,
+            Instant refundedAt, String recipientEmail
+    ) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("customerName", fullName);
+        data.put("orderNumber", orderNumber);
+        data.put("refundId", refundId);
+        data.put("refundAmount", refundAmount);
+        data.put("refundedAt", DateTimeUtil.format(refundedAt));
+
+        NotificationRequest request = NotificationRequest.builder()
+                .channel(NotificationChannel.EMAIL)
+                .event(NotificationEvent.REFUND_COMPLETED)
                 .recipient(recipientEmail)
                 .data(data)
                 .build();
