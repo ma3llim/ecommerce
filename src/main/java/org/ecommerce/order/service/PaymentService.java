@@ -8,9 +8,15 @@ import com.razorpay.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.entities.User;
+import org.ecommerce.auth.repository.UserRepository;
 import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ExternalServiceException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
+import org.ecommerce.common.notification.dtos.NotificationRequest;
+import org.ecommerce.common.notification.enums.channel.NotificationChannel;
+import org.ecommerce.common.notification.enums.channel.NotificationEvent;
+import org.ecommerce.common.notification.service.NotificationService;
+import org.ecommerce.common.utils.DateTimeUtil;
 import org.ecommerce.order.config.RazorpayProperties;
 import org.ecommerce.order.dtos.response.PaymentResponse;
 import org.ecommerce.order.entities.Order;
@@ -27,6 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -39,6 +48,8 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final OrderFinalizationService orderFinalizationService;
     private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     public String createRazorpayOrder(UUID orderId, BigDecimal amount) {
         JSONObject options = new JSONObject();
@@ -105,14 +116,48 @@ public class PaymentService {
                 return new ResourceNotFoundException("Order not found");
             });
 
+            User user = userRepository.findById(order.getUserId()).orElseThrow(() -> {
+                log.warn("Payment success email failed: user not found. orderId={}, userId={}",
+                        order.getId(), order.getUserId());
+                return new ResourceNotFoundException("User not found");
+            });
+
             order.setPaymentStatus(PaymentStatus.SUCCESS);
             orderRepository.save(order);
 
             orderFinalizationService.finalizeOrder(order);
+
+            sendPaymentSuccessMail(
+                    user.getFullName(),
+                    order.getOrderNumber(),
+                    razorpayPaymentId,
+                    payment.getAmount(),
+                    payment.getPaymentMethod(),
+                    Instant.now(),
+                    user.getEmail()
+            );
         } else {
             payment.setPaymentStatus(PaymentStatus.FAILED);
-
             paymentRepository.save(payment);
+
+            Order order = orderRepository.findById(payment.getOrderId()).orElseThrow(() -> {
+                log.warn("Payment failure email failed: order not found. paymentId={}, orderId={}",
+                        payment.getId(), payment.getOrderId());
+                return new ResourceNotFoundException("Order not found");
+            });
+
+            User user = userRepository.findById(order.getUserId()).orElseThrow(() -> {
+                log.warn("Payment failure email failed: user not found. orderId={}, userId={}",
+                        order.getId(), order.getUserId());
+                return new ResourceNotFoundException("User not found");
+            });
+
+            sendPaymentFailedMail(user.getFullName(), order.getOrderNumber(),
+                    "Payment was declined or could not be completed",
+                    payment.getAmount(),
+                    Instant.now(),
+                    user.getEmail()
+            );
         }
         log.info("Razorpay webhook processed successfully. event={}, razorpayOrderId={}", event, razorpayOrderId);
     }
@@ -202,5 +247,48 @@ public class PaymentService {
         log.info("Razorpay payment initiated: orderId={}, razorpayOrderId={}, amount={}", orderId, razorpayOrderId, amount);
 
         return objectMapper.convertValue(payment, PaymentResponse.class);
+    }
+
+    public void sendPaymentSuccessMail(
+            String fullName, String orderNumber, String paymentId, BigDecimal amount, PaymentMethod paymentMethod,
+            Instant paidAt, String recipientEmail
+    ) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("customerName", fullName);
+        data.put("orderNumber", orderNumber);
+        data.put("paymentId", paymentId);
+        data.put("amount", amount);
+        data.put("paymentMethod", paymentMethod);
+        data.put("paidAt", DateTimeUtil.format(paidAt));
+
+        NotificationRequest request = NotificationRequest.builder()
+                .channel(NotificationChannel.EMAIL)
+                .event(NotificationEvent.PAYMENT_SUCCESS)
+                .recipient(recipientEmail)
+                .data(data)
+                .build();
+
+        notificationService.send(request);
+    }
+
+    public void sendPaymentFailedMail(
+            String fullName, String orderNumber, String failureReason, BigDecimal amount,
+            Instant failedAt, String recipientEmail
+    ) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("customerName", fullName);
+        data.put("orderNumber", orderNumber);
+        data.put("amount", amount);
+        data.put("failureReason", failureReason);
+        data.put("failedAt", DateTimeUtil.format(failedAt));
+
+        NotificationRequest request = NotificationRequest.builder()
+                .channel(NotificationChannel.EMAIL)
+                .event(NotificationEvent.PAYMENT_FAILED)
+                .recipient(recipientEmail)
+                .data(data)
+                .build();
+
+        notificationService.send(request);
     }
 }

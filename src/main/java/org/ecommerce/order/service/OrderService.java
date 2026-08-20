@@ -227,7 +227,7 @@ public class OrderService {
         List<OrderItemEmailData> orderItemEmailData = orderItems.stream().map(orderItem ->
                 objectMapper.convertValue(orderItem, OrderItemEmailData.class)).toList();
 
-        buildOrderPlacedData(order, user.getFullName(), orderItemEmailData, address.getFullAddress(), user.getEmail());
+        sendOrderPlacedMail(order, user.getFullName(), orderItemEmailData, address.getFullAddress(), user.getEmail());
 
         return OrderResponse.builder()
                 .orderId(order.getId())
@@ -369,7 +369,7 @@ public class OrderService {
                 new ResourceNotFoundException("Payment not found")
         );
 
-        if (payment.getPaymentStatus() == PaymentStatus.CAPTURED) {
+        if (payment.getPaymentMethod() == PaymentMethod.RAZORPAY && payment.getPaymentStatus() == PaymentStatus.CAPTURED) {
             log.info("Refunding captured payment for cancelled order. orderId={}, paymentId={}",
                     orderId, payment.getId());
             paymentService.refundPayment(payment);
@@ -378,6 +378,7 @@ public class OrderService {
         int updatedRows = productVariantRepository.restoreStock(order.getId());
 
         if (updatedRows == 0) {
+            log.warn("Stock restoration failed: no stock rows updated. orderId={}", order.getId());
             throw new BadRequestException("Unable to restore stock");
         }
 
@@ -388,7 +389,7 @@ public class OrderService {
         return objectMapper.convertValue(order, OrderResponse.class);
     }
 
-    public void buildOrderPlacedData(
+    public void sendOrderPlacedMail(
             Order order, String fullName, List<OrderItemEmailData> items, String shippingAddress, String recipientEmail
     ) {
         Map<String, Object> data = new HashMap<>();
@@ -422,6 +423,4 @@ public class OrderService {
                 .subtract(order.getTaxAmount())
                 .setScale(2, RoundingMode.HALF_UP);
     }
-
-
 }
