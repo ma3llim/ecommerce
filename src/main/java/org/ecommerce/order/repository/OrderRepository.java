@@ -18,6 +18,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     Optional<Order> findByIdAndUserId(UUID orderId, UUID userId);
 
+    Optional<Order> findByOrderNumberAndUserId(String orderNumber, UUID userId);
+
     @Query("""
             SELECT o FROM Order o
             WHERE
