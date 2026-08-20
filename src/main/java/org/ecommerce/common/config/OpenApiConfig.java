@@ -47,7 +47,8 @@ public class OpenApiConfig {
                         "/api/v1/cart/**",
                         "/api/v1/coupons/**",
                         "/api/v1/payments/**",
-                        "/api/v1/orders/**"
+                        "/api/v1/orders/**",
+                        "/api/v1/shipment/**"
                 )
                 .build();
     }
