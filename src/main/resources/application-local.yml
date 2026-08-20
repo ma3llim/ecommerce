@@ -10,7 +10,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+  #    show-sql: true
 
   mail:
     host: smtp.gmail.com
@@ -32,6 +32,7 @@ app:
   cors:
     allowed-origins:
       - http://localhost:5173
+      - http://127.0.0.1:5500
 
   jwt:
     secret: ${JWT_SECRET}
@@ -51,6 +52,11 @@ app:
     cloud-name: ${CLOUDINARY_CLOUD_NAME}
     api-key: ${CLOUDINARY_API_KEY}
     api-secret: ${CLOUDINARY_API_SECRET}
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID}
+    key-secret: ${RAZORPAY_KEY_SECRET}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}
+    currency: INR
 
 springdoc:
   api-docs:

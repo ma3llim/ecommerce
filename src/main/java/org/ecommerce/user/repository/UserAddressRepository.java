@@ -16,6 +16,8 @@ public interface UserAddressRepository extends JpaRepository<UserAddress, UUID> 
 
     List<UserAddress> findAllByUserId(UUID userId);
 
+    Optional<UserAddress> findByUserIdAndId(UUID userId, UUID addressId);
+
     boolean existsByUserId(UUID userId);
 
     @Modifying

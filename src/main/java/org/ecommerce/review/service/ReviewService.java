@@ -63,7 +63,7 @@ public class ReviewService {
             throw new BadRequestException("You have already reviewed this product");
         }
 
-        /* boolean verifiedPurchase here we need one function to check user is purchase or not in order service */
+        // TODO: boolean verifiedPurchase here we need one function to check user is purchase or not in order service
         boolean verifiedPurchase = true;
         if (!verifiedPurchase) {
             log.warn("Create review rejected: user has not purchased the product. productId={}, variantId={}, userId={}",
@@ -121,7 +121,7 @@ public class ReviewService {
 
     public void deleteReview(UUID reviewId, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
-        
+
         User user = userRepository.findById(userId).orElseThrow(() -> {
             log.warn("delete review request failed: user not found, userId={}", userId);
             return new ResourceNotFoundException("User not found");
