@@ -6,6 +6,7 @@ import org.ecommerce.order.enums.ShipmentStatus;
 public record UpdateShipmentStatusRequest(
         @NotNull(message = "Shipment status is required")
         ShipmentStatus status,
-        String currentLocation
+        String currentLocation,
+        String description
 ) {
 }

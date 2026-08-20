@@ -36,9 +36,6 @@ public class Shipment {
     @Column(name = "shipment_status", nullable = false)
     private ShipmentStatus shipmentStatus;
 
-    @Column(name = "current_location")
-    private String currentLocation;
-
     @Column(name = "shipped_at")
     private Instant shippedAt;
 

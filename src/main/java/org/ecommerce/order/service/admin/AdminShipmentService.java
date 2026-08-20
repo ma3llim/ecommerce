@@ -9,12 +9,15 @@ import org.ecommerce.common.exception.ResourceNotFoundException;
 import org.ecommerce.order.dtos.admin.request.CreateShipmentRequest;
 import org.ecommerce.order.dtos.admin.request.UpdateShipmentStatusRequest;
 import org.ecommerce.order.dtos.admin.response.ShipmentResponse;
+import org.ecommerce.order.dtos.admin.response.ShipmentTimelineResponse;
 import org.ecommerce.order.entities.Order;
 import org.ecommerce.order.entities.Shipment;
+import org.ecommerce.order.entities.ShipmentTrackingEvent;
 import org.ecommerce.order.enums.OrderStatus;
 import org.ecommerce.order.enums.ShipmentStatus;
 import org.ecommerce.order.repository.OrderRepository;
 import org.ecommerce.order.repository.ShipmentRepository;
+import org.ecommerce.order.repository.ShipmentTrackingEventRepository;
 import org.ecommerce.order.specification.ShipmentSpecification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -31,6 +35,7 @@ import java.util.UUID;
 public class AdminShipmentService {
     private final ShipmentRepository shipmentRepository;
     private final OrderRepository orderRepository;
+    private final ShipmentTrackingEventRepository trackingEventRepository;
     private final ObjectMapper objectMapper;
 
     public PageResponse<ShipmentResponse> getAllShipments(
@@ -45,11 +50,11 @@ public class AdminShipmentService {
 
         Page<Shipment> shipments = shipmentRepository.findAll(specification, pageable);
 
-        Page<ShipmentResponse> shipmentResponses = shipments.map(shipment ->
-                objectMapper.convertValue(shipment, ShipmentResponse.class));
+        List<ShipmentResponse> responses = shipments.getContent().stream()
+                .map(shipment -> objectMapper.convertValue(shipment, ShipmentResponse.class)).toList();
 
         return PageResponse.<ShipmentResponse>builder()
-                .content(shipmentResponses.getContent())
+                .content(responses)
                 .page(shipments.getNumber())
                 .size(shipments.getSize())
                 .totalElements(shipments.getTotalElements())
@@ -65,7 +70,25 @@ public class AdminShipmentService {
             return new ResourceNotFoundException("Shipment not found");
         });
 
-        return objectMapper.convertValue(shipment, ShipmentResponse.class);
+        List<ShipmentTrackingEvent> shipmentTrackingEvents = trackingEventRepository
+                .findByShipmentIdOrderByEventTimeDesc(shipmentId);
+
+        List<ShipmentTimelineResponse> shipmentTimelineResponses = shipmentTrackingEvents.stream()
+                .map(shipmentTrackingEvent -> objectMapper.convertValue(shipmentTrackingEvent,
+                        ShipmentTimelineResponse.class)).toList();
+
+        return ShipmentResponse.builder()
+                .shipmentId(shipment.getId())
+                .orderId(shipment.getOrderId())
+                .courierName(shipment.getCourierName())
+                .trackingNumber(shipment.getTrackingNumber())
+                .shipmentStatus(shipment.getShipmentStatus())
+                .shippedAt(shipment.getShippedAt())
+                .deliveredAt(shipment.getDeliveredAt())
+                .createdAt(shipment.getCreatedAt())
+                .updatedAt(shipment.getUpdatedAt())
+                .timeline(shipmentTimelineResponses)
+                .build();
     }
 
     @Transactional
@@ -84,23 +107,56 @@ public class AdminShipmentService {
             throw new BadRequestException("Shipment can only be created for a packed order");
         }
 
-        Shipment shipment = Shipment.builder().orderId(orderId)
+        Instant now = Instant.now();
+
+        String trackingNumber = generateTrackingNumber();
+
+        Shipment shipment = Shipment.builder()
+                .orderId(orderId)
                 .courierName(request.courierName())
-                .trackingNumber(generateTrackingNumber())
+                .trackingNumber(trackingNumber)
                 .shipmentStatus(ShipmentStatus.SHIPPED)
-                .shippedAt(Instant.now())
+                .shippedAt(now)
                 .build();
 
         shipmentRepository.save(shipment);
+
+        ShipmentTrackingEvent trackingEvent = ShipmentTrackingEvent.builder()
+                .shipmentId(shipment.getId())
+                .status(ShipmentStatus.SHIPPED)
+                .location("Warehouse")
+                .description("Shipment picked up by courier")
+                .eventTime(now)
+                .build();
+
+        trackingEventRepository.save(trackingEvent);
 
         order.setOrderStatus(OrderStatus.SHIPPED);
 
         orderRepository.save(order);
 
-        log.info("Shipment created: shipmentId={}, orderId={}, trackingNumber={}",
-                shipment.getId(), orderId, shipment.getTrackingNumber());
+        log.info("Shipment created: shipmentId={}, orderId={}, trackingNumber={}", shipment.getId(),
+                orderId, shipment.getTrackingNumber());
 
-        return objectMapper.convertValue(shipment, ShipmentResponse.class);
+        List<ShipmentTrackingEvent> trackingEvents = trackingEventRepository.findByShipmentIdOrderByEventTimeAsc(
+                shipment.getId());
+
+        List<ShipmentTimelineResponse> shipmentTimelineResponses = trackingEvents.stream()
+                .map(event -> objectMapper.convertValue(event, ShipmentTimelineResponse.class)
+                ).toList();
+
+        return ShipmentResponse.builder()
+                .shipmentId(shipment.getId())
+                .orderId(shipment.getOrderId())
+                .courierName(shipment.getCourierName())
+                .trackingNumber(shipment.getTrackingNumber())
+                .shipmentStatus(shipment.getShipmentStatus())
+                .shippedAt(shipment.getShippedAt())
+                .deliveredAt(shipment.getDeliveredAt())
+                .createdAt(shipment.getCreatedAt())
+                .updatedAt(shipment.getUpdatedAt())
+                .timeline(shipmentTimelineResponses)
+                .build();
     }
 
     private String generateTrackingNumber() {
@@ -120,23 +176,26 @@ public class AdminShipmentService {
         ShipmentStatus currentStatus = shipment.getShipmentStatus();
         ShipmentStatus newStatus = request.status();
 
-        if (currentStatus == newStatus) {
-            throw new BadRequestException("Shipment is already in " + newStatus + " status");
-        }
-
         validateStatusTransition(currentStatus, newStatus);
 
+        Instant now = Instant.now();
         shipment.setShipmentStatus(newStatus);
 
-        if (request.currentLocation() != null && !request.currentLocation().isBlank()) {
-            shipment.setCurrentLocation(request.currentLocation().trim());
-        }
-
         if (newStatus == ShipmentStatus.DELIVERED) {
-            shipment.setDeliveredAt(Instant.now());
+            shipment.setDeliveredAt(now);
         }
 
         shipmentRepository.save(shipment);
+
+        ShipmentTrackingEvent trackingEvent = ShipmentTrackingEvent.builder()
+                .shipmentId(shipment.getId())
+                .status(newStatus)
+                .location(request.currentLocation())
+                .description(request.description())
+                .eventTime(now)
+                .build();
+
+        trackingEventRepository.save(trackingEvent);
 
         if (newStatus == ShipmentStatus.DELIVERED) {
             Order order = orderRepository.findById(shipment.getOrderId()).orElseThrow(() ->
@@ -147,17 +206,38 @@ public class AdminShipmentService {
             orderRepository.save(order);
         }
 
-        log.info("Shipment status updated: shipmentId={}, {} -> {}", shipmentId, currentStatus, newStatus);
+        log.info("Shipment status updated: shipmentId={}, {} -> {}, location={}",
+                shipmentId, currentStatus, newStatus, request.currentLocation()
+        );
 
-        return objectMapper.convertValue(shipment, ShipmentResponse.class);
+        List<ShipmentTrackingEvent> trackingEvents = trackingEventRepository.findByShipmentIdOrderByEventTimeAsc(
+                shipment.getId());
+
+        List<ShipmentTimelineResponse> shipmentTimelineResponses = trackingEvents.stream()
+                .map(event -> objectMapper.convertValue(event, ShipmentTimelineResponse.class)
+                ).toList();
+
+        return ShipmentResponse.builder()
+                .shipmentId(shipment.getId())
+                .orderId(shipment.getOrderId())
+                .courierName(shipment.getCourierName())
+                .trackingNumber(shipment.getTrackingNumber())
+                .shipmentStatus(shipment.getShipmentStatus())
+                .shippedAt(shipment.getShippedAt())
+                .deliveredAt(shipment.getDeliveredAt())
+                .createdAt(shipment.getCreatedAt())
+                .updatedAt(shipment.getUpdatedAt())
+                .timeline(shipmentTimelineResponses)
+                .build();
     }
 
     private void validateStatusTransition(ShipmentStatus currentStatus, ShipmentStatus newStatus) {
         boolean valid = switch (currentStatus) {
-            case PENDING -> newStatus == ShipmentStatus.SHIPPED;
-            case SHIPPED -> newStatus == ShipmentStatus.IN_TRANSIT;
-            case IN_TRANSIT -> newStatus == ShipmentStatus.OUT_FOR_DELIVERY;
-            case OUT_FOR_DELIVERY -> newStatus == ShipmentStatus.DELIVERED;
+            case PENDING -> newStatus == ShipmentStatus.PENDING || newStatus == ShipmentStatus.SHIPPED;
+            case SHIPPED -> newStatus == ShipmentStatus.SHIPPED || newStatus == ShipmentStatus.IN_TRANSIT;
+            case IN_TRANSIT -> newStatus == ShipmentStatus.IN_TRANSIT || newStatus == ShipmentStatus.OUT_FOR_DELIVERY;
+            case OUT_FOR_DELIVERY ->
+                    newStatus == ShipmentStatus.OUT_FOR_DELIVERY || newStatus == ShipmentStatus.DELIVERED;
             case DELIVERED -> false;
         };
 
