@@ -1,5 +1,7 @@
 package org.ecommerce.order.controller.admin;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,9 +23,14 @@ import java.util.UUID;
 @RequestMapping("/api/v1/admin/payments")
 @Slf4j
 @RequiredArgsConstructor
+@Tag(name = "Admin Payments", description = "Admin APIs for viewing and managing payment records")
 public class AdminPaymentController {
     private final AdminPaymentService adminPaymentService;
 
+    @Operation(
+            summary = "Get all payments",
+            description = "Retrieves a paginated list of payments with optional filters for search, payment status, payment method, date range, and amount range."
+    )
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<PageResponse<PaymentResponse>>> getAllPayments(
             @RequestParam(required = false) String search,
@@ -49,6 +56,7 @@ public class AdminPaymentController {
         );
     }
 
+    @Operation(summary = "Get payment details", description = "Retrieves the details of a specific payment by its ID.")
     @GetMapping("/{paymentId}")
     public ResponseEntity<ApiSuccessResponse<PaymentResponse>> getPayment(
             @PathVariable UUID paymentId,

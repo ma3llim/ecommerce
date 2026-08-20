@@ -32,6 +32,10 @@ public class PaymentController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(
+            summary = "Initiate payment",
+            description = "Initiates payment for the specified order using the authenticated customer's payment details."
+    )
     @PreAuthorize("hasRole('USER')")
     @PostMapping("/{orderId}/payments")
     public ResponseEntity<ApiSuccessResponse<PaymentResponse>> initiatePayment(

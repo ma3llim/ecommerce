@@ -1,5 +1,7 @@
 package org.ecommerce.order.controller.admin;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,9 +26,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/admin/shipments")
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Admin - Shipments", description = "Admin APIs for managing shipments and shipment status")
 public class AdminShipmentController {
     private final AdminShipmentService adminShipmentService;
 
+    @Operation(
+            summary = "Get all shipments",
+            description = "Retrieves a paginated list of shipments with optional search, status, courier, and date-range filters."
+    )
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<PageResponse<ShipmentResponse>>> getAllShipments(
             @RequestParam(required = false) String search,
@@ -50,6 +57,10 @@ public class AdminShipmentController {
         );
     }
 
+    @Operation(
+            summary = "Get shipment details",
+            description = "Retrieves complete shipment details including tracking information for the specified shipment."
+    )
     @GetMapping("/{shipmentId}")
     public ResponseEntity<ApiSuccessResponse<ShipmentResponse>> getShipment(
             @PathVariable UUID shipmentId,
@@ -67,6 +78,7 @@ public class AdminShipmentController {
         );
     }
 
+    @Operation(summary = "Create shipment", description = "Creates a shipment for the specified order.")
     @PostMapping("/orders/{orderId}/shipment")
     public ResponseEntity<ApiSuccessResponse<ShipmentResponse>> createShipment(
             @PathVariable UUID orderId,
@@ -84,6 +96,10 @@ public class AdminShipmentController {
         );
     }
 
+    @Operation(
+            summary = "Update shipment status",
+            description = "Updates the status of an existing shipment and records the corresponding tracking event."
+    )
     @PatchMapping("/{shipmentId}/status")
     public ResponseEntity<ApiSuccessResponse<ShipmentResponse>> updateShipmentStatus(
             @PathVariable UUID shipmentId,

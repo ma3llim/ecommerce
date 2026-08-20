@@ -50,6 +50,10 @@ public class OrderController {
         );
     }
 
+    @Operation(
+            summary = "Get customer orders",
+            description = "Retrieves a paginated list of orders belonging to the authenticated customer."
+    )
     @GetMapping
     public ResponseEntity<ApiSuccessResponse<PageResponse<OrderListResponse>>> getOrders(
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
@@ -67,6 +71,10 @@ public class OrderController {
         );
     }
 
+    @Operation(
+            summary = "Get order details",
+            description = "Retrieves detailed information for an order belonging to the authenticated customer."
+    )
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiSuccessResponse<OrderDetailResponse>> getOrderDetail(
             @PathVariable UUID orderId, Authentication authentication,
@@ -84,6 +92,10 @@ public class OrderController {
         );
     }
 
+    @Operation(
+            summary = "Cancel order",
+            description = "Cancels an order belonging to the authenticated customer."
+    )
     @PatchMapping("/{orderId}/cancel")
     public ResponseEntity<ApiSuccessResponse<OrderResponse>> cancelOrder(
             @PathVariable UUID orderId, Authentication authentication,
