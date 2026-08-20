@@ -3,13 +3,10 @@ package org.ecommerce.order.repository;
 import org.ecommerce.order.entities.OrderItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
 public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
 
     List<OrderItem> findByOrderId(UUID orderId);
-
-    List<OrderItem> findByOrderIdIn(Collection<UUID> orderIds);
 }

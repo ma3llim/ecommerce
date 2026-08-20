@@ -23,6 +23,7 @@ public record OrderDetailResponse(
         OrderStatus orderStatus,
         List<OrderItemResponse> items,
         PaymentResponse payment,
-        AddressResponse shippingAddress
+        AddressResponse shippingAddress,
+        UserShipmentResponse userShipmentResponse
 ) {
 }

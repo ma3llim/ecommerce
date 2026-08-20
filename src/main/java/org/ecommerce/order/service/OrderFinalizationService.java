@@ -41,13 +41,13 @@ public class OrderFinalizationService {
         int updatedRows = productVariantRepository.reduceStock(order.getId());
 
         if (updatedRows == 0) {
-            log.error("Order finalization failed: stock could not be reduced. orderId={}", order.getId());
+            log.warn("Order finalization failed: unable to reserve stock. orderId={}", order.getId());
             throw new BadRequestException("Unable to reserve product stock");
         }
 
         // clear cart and cart items
         Cart cart = cartRepository.findByUserId(order.getUserId()).orElseThrow(() -> {
-            log.error("Order finalization failed: cart not found. orderId={}, userId={}",
+            log.warn("Order finalization failed: cart not found. orderId={}, userId={}",
                     order.getId(), order.getUserId());
             return new ResourceNotFoundException("Cart not found");
         });
@@ -64,7 +64,7 @@ public class OrderFinalizationService {
         // increase coupon usage
         if (order.getCouponId() != null) {
             Coupon coupon = couponRepository.findById(order.getCouponId()).orElseThrow(() -> {
-                        log.error("Order finalization failed: coupon not found. orderId={}, couponId={}",
+                        log.warn("Order finalization failed: coupon not found. orderId={}, couponId={}",
                                 order.getId(), order.getCouponId());
                         return new ResourceNotFoundException("Coupon not found");
                     }
@@ -72,6 +72,9 @@ public class OrderFinalizationService {
 
             coupon.setUsedCount(coupon.getUsedCount() + 1);
             couponRepository.save(coupon);
+            
+            log.info("Coupon usage incremented. orderId={}, couponId={}, couponCode={}, usedCount={}",
+                    order.getId(), coupon.getId(), coupon.getCode(), coupon.getUsedCount());
         }
 
         order.setOrderStatus(OrderStatus.CONFIRMED);

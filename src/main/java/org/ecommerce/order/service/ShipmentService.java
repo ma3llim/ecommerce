@@ -34,12 +34,13 @@ public class ShipmentService {
         UUID userId = ((User) authentication.getPrincipal()).getId();
 
         Order order = orderRepository.findByOrderNumberAndUserId(orderNumber, userId).orElseThrow(() -> {
-            log.warn("Order not found for user: orderNumber={}, userId={}", orderNumber, userId);
+            log.warn("Get shipment failed: order not found. orderNumber={}, userId={}", orderNumber, userId);
             return new ResourceNotFoundException("Order not found");
         });
 
         Shipment shipment = shipmentRepository.findByOrderId(order.getId()).orElseThrow(() -> {
-            log.warn("Shipment not found: orderNumber={}, orderId={}", orderNumber, order.getId());
+            log.warn("Get shipment failed: shipment not found. orderNumber={}, orderId={}, userId={}",
+                    orderNumber, order.getId(), userId);
             return new ResourceNotFoundException("Shipment not found");
         });
 

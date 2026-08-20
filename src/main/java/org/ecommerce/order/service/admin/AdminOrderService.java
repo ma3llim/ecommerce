@@ -46,6 +46,7 @@ public class AdminOrderService {
             try {
                 status = OrderStatus.valueOf(orderStatus.toUpperCase());
             } catch (IllegalArgumentException e) {
+                log.warn("Get orders failed: invalid order status. orderStatus={}", orderStatus);
                 throw new BadRequestException("Invalid order status: " + orderStatus);
             }
         }
@@ -56,6 +57,7 @@ public class AdminOrderService {
             try {
                 paymentStatusEnum = PaymentStatus.valueOf(paymentStatus.toUpperCase());
             } catch (IllegalArgumentException e) {
+                log.warn("Get orders failed: invalid payment status. paymentStatus={}", paymentStatus);
                 throw new BadRequestException("Invalid payment status: " + paymentStatus);
             }
         }
@@ -78,7 +80,7 @@ public class AdminOrderService {
 
     public OrderDetailResponse getOrderDetails(UUID orderId) {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> {
-            log.warn("order not found: orderId={}", orderId);
+            log.warn("Get order details failed: order not found. orderId={}", orderId);
             return new ResourceNotFoundException("Order not found");
         });
 
@@ -127,6 +129,8 @@ public class AdminOrderService {
         OrderStatus currentStatus = order.getOrderStatus();
 
         if (currentStatus == status) {
+            log.warn("Update order status rejected: order already has requested status. " +
+                    "orderId={}, status={}", orderId, status);
             throw new BadRequestException("Order is already in " + status + " status");
         }
 
@@ -171,7 +175,8 @@ public class AdminOrderService {
         });
 
         if (payment.getPaymentStatus() == PaymentStatus.CAPTURED) {
-            log.info("Refunding payment: orderId={}, transactionId={}", orderId, payment.getTransactionId());
+            log.info("Refund initiated for cancelled order. orderId={}, transactionId={}",
+                    orderId, payment.getTransactionId());
 
             paymentService.refundPayment(payment);
 

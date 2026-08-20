@@ -47,13 +47,12 @@ public class PaymentService {
         options.put("currency", razorpayProperties.currency());
         options.put("receipt", orderId.toString());
 
-        log.info("options: {}", options);
         try {
             com.razorpay.Order razorpayOrder = razorpayClient.orders.create(options);
-            log.info("razorpayOrder: {}", razorpayOrder);
             return razorpayOrder.get("id");
         } catch (RazorpayException e) {
-            log.error("Failed to create Razorpay order: orderId={}, amount={}", orderId, amount, e);
+            log.error("Razorpay order creation failed. orderId={}, amount={}, currency={}",
+                    orderId, amount, razorpayProperties.currency(), e);
             throw new ExternalServiceException("Unable to create Razorpay order");
         }
     }
@@ -83,8 +82,11 @@ public class PaymentService {
         String razorpayPaymentId = paymentEntity.getString("id");
         String razorpayOrderId = paymentEntity.getString("order_id");
 
-        Payment payment = paymentRepository.findByRazorpayOrderId(razorpayOrderId).orElseThrow(() ->
-                new ResourceNotFoundException("Payment not found"));
+        Payment payment = paymentRepository.findByRazorpayOrderId(razorpayOrderId).orElseThrow(() -> {
+            log.warn("Razorpay webhook rejected: payment not found. razorpayOrderId={}, event={}",
+                    razorpayOrderId, event);
+            return new ResourceNotFoundException("Payment not found");
+        });
 
         if (payment.getTransactionId() != null) {
             log.info("Payment already processed. transactionId={}", payment.getTransactionId());
@@ -97,9 +99,11 @@ public class PaymentService {
 
             paymentRepository.save(payment);
 
-            Order order = orderRepository.findById(payment.getOrderId()).orElseThrow(() ->
-                    new ResourceNotFoundException("Order not found")
-            );
+            Order order = orderRepository.findById(payment.getOrderId()).orElseThrow(() -> {
+                log.warn("Razorpay webhook processing failed: order not found. paymentId={}, orderId={}",
+                        payment.getId(), payment.getOrderId());
+                return new ResourceNotFoundException("Order not found");
+            });
 
             order.setPaymentStatus(PaymentStatus.SUCCESS);
             orderRepository.save(order);
@@ -115,10 +119,13 @@ public class PaymentService {
 
     public void refundPayment(Payment payment) {
         if (payment.getTransactionId() == null) {
+            log.warn("Payment refund rejected: transaction ID not found. paymentId={}", payment.getId());
             throw new BadRequestException("Cannot refund payment: transaction ID not found");
         }
 
         if (payment.getPaymentStatus() != PaymentStatus.CAPTURED) {
+            log.warn("Payment refund rejected: payment is not captured. paymentId={}, status={}",
+                    payment.getId(), payment.getPaymentStatus());
             throw new BadRequestException("Payment is not eligible for refund");
         }
 
@@ -131,7 +138,8 @@ public class PaymentService {
             payment.setPaymentStatus(PaymentStatus.REFUNDED);
             paymentRepository.save(payment);
         } catch (RazorpayException e) {
-            log.error("Razorpay refund failed. paymentId={}", payment.getTransactionId(), e);
+            log.error("Razorpay refund failed. transactionId={}, paymentId={}",
+                    payment.getTransactionId(), payment.getId(), e);
             throw new ExternalServiceException("Unable to process payment refund");
         }
     }
@@ -150,14 +158,17 @@ public class PaymentService {
         }
 
         if (order.getPaymentStatus() == PaymentStatus.SUCCESS) {
+            log.warn("Payment initiation rejected: order already paid. orderId={}, userId={}", orderId, userId);
             throw new BadRequestException("Order has already been paid");
         }
 
         if (order.getOrderStatus() == OrderStatus.CANCELLED) {
+            log.warn("Payment initiation rejected: order is cancelled. orderId={}, userId={}", orderId, userId);
             throw new BadRequestException("Cancelled order cannot be paid");
         }
 
         if (order.getOrderStatus() == OrderStatus.DELIVERED) {
+            log.warn("Payment initiation rejected: order is already delivered. orderId={}, userId={}", orderId, userId);
             throw new BadRequestException("Delivered order cannot be paid");
         }
 
@@ -167,6 +178,7 @@ public class PaymentService {
         });
 
         if (payment.getPaymentMethod() == PaymentMethod.COD) {
+            log.warn("Payment initiation rejected: order uses COD. orderId={}, userId={}", orderId, userId);
             throw new BadRequestException("COD payment does not require online payment");
         }
 
@@ -187,8 +199,7 @@ public class PaymentService {
 
         paymentRepository.save(payment);
 
-        log.info("Razorpay payment initiated: orderId={}, razorpayOrderId={}, amount={}",
-                orderId, razorpayOrderId, amount);
+        log.info("Razorpay payment initiated: orderId={}, razorpayOrderId={}, amount={}", orderId, razorpayOrderId, amount);
 
         return objectMapper.convertValue(payment, PaymentResponse.class);
     }

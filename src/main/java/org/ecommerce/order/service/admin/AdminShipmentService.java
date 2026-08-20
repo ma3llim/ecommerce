@@ -99,11 +99,14 @@ public class AdminShipmentService {
         });
 
         if (shipmentRepository.existsByOrderId(orderId)) {
+            log.warn("Create shipment rejected: shipment already exists. orderId={}", orderId);
             throw new BadRequestException("Shipment already exists for this order");
         }
 
 
         if (order.getOrderStatus() != OrderStatus.PACKED) {
+            log.warn("Create shipment rejected: order is not packed. orderId={}, orderStatus={}",
+                    orderId, order.getOrderStatus());
             throw new BadRequestException("Shipment can only be created for a packed order");
         }
 
@@ -198,9 +201,11 @@ public class AdminShipmentService {
         trackingEventRepository.save(trackingEvent);
 
         if (newStatus == ShipmentStatus.DELIVERED) {
-            Order order = orderRepository.findById(shipment.getOrderId()).orElseThrow(() ->
-                    new ResourceNotFoundException("Order not found")
-            );
+            Order order = orderRepository.findById(shipment.getOrderId()).orElseThrow(() -> {
+                log.warn("Update shipment failed: order not found. shipmentId={}, orderId={}",
+                        shipmentId, shipment.getOrderId());
+                return new ResourceNotFoundException("Order not found");
+            });
 
             order.setOrderStatus(OrderStatus.DELIVERED);
             orderRepository.save(order);
@@ -242,6 +247,8 @@ public class AdminShipmentService {
         };
 
         if (!valid) {
+            log.warn("Shipment status transition rejected: currentStatus={}, requestedStatus={}",
+                    currentStatus, newStatus);
             throw new BadRequestException("Invalid shipment status transition: " + currentStatus + " -> " + newStatus);
         }
     }

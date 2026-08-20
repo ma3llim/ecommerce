@@ -49,7 +49,7 @@ public class AdminPaymentService {
         List<PaymentResponse> content = payments.getContent().stream()
                 .map(payment -> objectMapper.convertValue(payment, PaymentResponse.class)).toList();
 
-        log.info("Admin payment list fetched: search={}, status={}, method={}, page={}, size={}",
+        log.info("Admin payment list retrieved successfully. search={}, status={}, method={}, page={}, size={}",
                 search, status, method, pageable.getPageNumber(), pageable.getPageSize());
 
         return PageResponse.<PaymentResponse>builder()
@@ -68,7 +68,7 @@ public class AdminPaymentService {
             log.warn("Admin payment not found: paymentId={}", paymentId);
             return new ResourceNotFoundException("Payment not found");
         });
-        log.info("Admin payment details fetched: paymentId={}", paymentId);
+        log.info("Admin payment details retrieved successfully. paymentId={}", paymentId);
 
         return objectMapper.convertValue(payment, PaymentResponse.class);
     }
@@ -81,7 +81,7 @@ public class AdminPaymentService {
         try {
             return PaymentStatus.valueOf(paymentStatus.toUpperCase());
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid payment status: {}", paymentStatus);
+            log.warn("Get payments failed: invalid payment status. paymentStatus={}", paymentStatus);
             throw new BadRequestException("Invalid payment status: " + paymentStatus);
         }
     }
@@ -94,7 +94,7 @@ public class AdminPaymentService {
         try {
             return PaymentMethod.valueOf(paymentMethod.toUpperCase());
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid payment method: {}", paymentMethod);
+            log.warn("Get payments failed: invalid payment method. paymentMethod={}", paymentMethod);
             throw new BadRequestException("Invalid payment method: " + paymentMethod);
         }
     }

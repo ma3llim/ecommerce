@@ -20,15 +20,11 @@ import org.ecommerce.coupon.entities.Coupon;
 import org.ecommerce.coupon.repository.CouponRepository;
 import org.ecommerce.order.dtos.request.CreateOrderRequest;
 import org.ecommerce.order.dtos.response.*;
-import org.ecommerce.order.entities.Order;
-import org.ecommerce.order.entities.OrderItem;
-import org.ecommerce.order.entities.Payment;
+import org.ecommerce.order.entities.*;
 import org.ecommerce.order.enums.OrderStatus;
 import org.ecommerce.order.enums.PaymentMethod;
 import org.ecommerce.order.enums.PaymentStatus;
-import org.ecommerce.order.repository.OrderItemRepository;
-import org.ecommerce.order.repository.OrderRepository;
-import org.ecommerce.order.repository.PaymentRepository;
+import org.ecommerce.order.repository.*;
 import org.ecommerce.user.entity.UserAddress;
 import org.ecommerce.user.repository.UserAddressRepository;
 import org.springframework.data.domain.Page;
@@ -62,6 +58,9 @@ public class OrderService {
     private final PaymentService paymentService;
     private final ProductVariantRepository productVariantRepository;
     private final OrderFinalizationService orderFinalizationService;
+    private final ShipmentService shipmentService;
+    private final ShipmentTrackingEventRepository shipmentTrackingEventRepository;
+    private final ShipmentRepository shipmentRepository;
 
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request, Authentication authentication) throws RazorpayException {
@@ -290,17 +289,38 @@ public class OrderService {
         List<OrderItemResponse> orderItemResponses = orderItems.stream().map(orderItem ->
                 objectMapper.convertValue(orderItem, OrderItemResponse.class)).toList();
 
-        Payment payment = paymentRepository.findByOrderId(order.getId()).orElseThrow(() ->
-                new ResourceNotFoundException("Payment not found")
-        );
+        Payment payment = paymentRepository.findByOrderId(order.getId()).orElseThrow(() -> {
+            log.warn("Get order details failed: payment not found. orderId={}, userId={}", orderId, userId);
+            return new ResourceNotFoundException("Payment not found");
+        });
         PaymentResponse paymentResponse = objectMapper.convertValue(payment, PaymentResponse.class);
 
-        // TODO: added shipping response
+        Shipment shipment = shipmentRepository.findByOrderId(order.getId()).orElseThrow(() -> {
+            log.warn("Get order details failed: shipment not found. orderId={}", order.getId());
+            return new ResourceNotFoundException("Shipment not found");
+        });
+        
+        List<ShipmentTrackingEvent> shipmentTrackingEvents = shipmentTrackingEventRepository
+                .findByShipmentIdOrderByEventTimeDesc(shipment.getId());
+
+        List<ShipmentTimelineResponse> shipmentTimelineResponses = shipmentTrackingEvents.stream().map(shipmentTrackingEvent ->
+                objectMapper.convertValue(shipmentTrackingEvent, ShipmentTimelineResponse.class)).toList();
+
+        UserShipmentResponse shipmentResponse = UserShipmentResponse.builder()
+                .shipmentId(shipment.getId())
+                .courierName(shipment.getCourierName())
+                .trackingNumber(shipment.getTrackingNumber())
+                .shipmentStatus(shipment.getShipmentStatus())
+                .shippedAt(shipment.getShippedAt())
+                .deliveredAt(shipment.getDeliveredAt())
+                .timeline(shipmentTimelineResponses).build();
 
         UserAddress shippingAddress = userAddressRepository.findByUserIdAndId(userId, order.getShippingAddressId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Shipping address not found")
-                );
+                .orElseThrow(() -> {
+                    log.warn("Get order details failed: shipping address not found. orderId={}, userId={}, addressId={}",
+                            orderId, userId, order.getShippingAddressId());
+                    return new ResourceNotFoundException("Shipping address not found");
+                });
 
         AddressResponse shippingAddressResponse = objectMapper.convertValue(shippingAddress, AddressResponse.class);
 
@@ -321,6 +341,7 @@ public class OrderService {
                 .items(orderItemResponses)
                 .payment(paymentResponse)
                 .shippingAddress(shippingAddressResponse)
+                .userShipmentResponse(shipmentResponse)
                 .build();
     }
 
@@ -328,9 +349,10 @@ public class OrderService {
     public OrderResponse cancelOrder(UUID orderId, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
 
-        Order order = orderRepository.findByIdAndUserId(orderId, userId).orElseThrow(() ->
-                new ResourceNotFoundException("Order not found")
-        );
+        Order order = orderRepository.findByIdAndUserId(orderId, userId).orElseThrow(() -> {
+            log.warn("Cancel order failed: order not found. orderId={}, userId={}", orderId, userId);
+            return new ResourceNotFoundException("Order not found");
+        });
 
         if (order.getOrderStatus() != OrderStatus.PENDING && order.getOrderStatus() != OrderStatus.CONFIRMED) {
             throw new BadRequestException("Order cannot be cancelled at this stage");
@@ -341,6 +363,8 @@ public class OrderService {
         );
 
         if (payment.getPaymentStatus() == PaymentStatus.CAPTURED) {
+            log.info("Refunding captured payment for cancelled order. orderId={}, paymentId={}",
+                    orderId, payment.getId());
             paymentService.refundPayment(payment);
         }
 
