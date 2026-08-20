@@ -149,7 +149,7 @@ public class AuthService {
         UUID tokenId = UUID.randomUUID();
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user, tokenId.toString());
-        log.info("Access and refresh tokens generated successfully for userId={}", user.getId());
+        log.info("verify email: Access and refresh tokens generated successfully for userId={}", user.getId());
 
         RefreshToken refreshTokenEntity = RefreshToken.builder()
                 .id(tokenId)
@@ -161,6 +161,8 @@ public class AuthService {
         refreshTokenRepository.save(refreshTokenEntity);
 
         UserResponseDto userResponseDto = objectMapper.convertValue(user, UserResponseDto.class);
+
+        WelcomeUserMail(user.getFullName(), user.getEmail());
 
         return new UserAndTokenResponseDto(accessToken, refreshToken, userResponseDto);
     }
@@ -231,7 +233,7 @@ public class AuthService {
         UUID tokenId = UUID.randomUUID();
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user, tokenId.toString());
-        log.info("Access and refresh tokens generated successfully for userId={}", user.getId());
+        log.info("login: Access and refresh tokens generated successfully for userId={}", user.getId());
 
         RefreshToken refreshTokenEntity = RefreshToken.builder()
                 .id(tokenId)
@@ -254,7 +256,7 @@ public class AuthService {
         }
 
         if (!jwtService.validateRefreshToken(refreshToken)) {
-            log.warn("Invalid refresh token received");
+            log.warn("refresh token request failed: Invalid refresh token received");
             throw new UnauthorizedException("Invalid refresh token");
         }
         Claims refreshTokenClaims = jwtService.extractClaims(refreshToken);
@@ -264,7 +266,7 @@ public class AuthService {
         UUID userId = jwtService.getUserId(refreshTokenClaims);
 
         RefreshToken tokenEntity = refreshTokenRepository.findById(tokenId).orElseThrow(() -> {
-            log.warn("Refresh token not found, tokenId={}, userId={}", tokenId, userId);
+            log.warn("refresh token request failed: Refresh token not found, tokenId={}, userId={}", tokenId, userId);
             return new UnauthorizedException("Invalid refresh token");
         });
 
@@ -435,6 +437,21 @@ public class AuthService {
         NotificationRequest request = NotificationRequest.builder()
                 .channel(NotificationChannel.EMAIL)
                 .event(NotificationEvent.FORGET_PASSWORD_VERIFICATION)
+                .recipient(recipientEmail)
+                .data(data)
+                .build();
+
+        notificationService.send(request);
+    }
+
+    // Welcome Mail
+    void WelcomeUserMail(String fullName, String recipientEmail) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("fullName", fullName);
+
+        NotificationRequest request = NotificationRequest.builder()
+                .channel(NotificationChannel.EMAIL)
+                .event(NotificationEvent.USER_REGISTERED)
                 .recipient(recipientEmail)
                 .data(data)
                 .build();
