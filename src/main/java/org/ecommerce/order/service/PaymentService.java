@@ -199,7 +199,7 @@ public class PaymentService {
 
             paymentRepository.save(payment);
 
-            sendRefundedMail(user.getFullName(), order.getOrderNumber(), refundId, order.getTotalAmount(), Instant.now(), user.getEmail()));
+            sendRefundedMail(user.getFullName(), order.getOrderNumber(), refundId, order.getTotalAmount(), Instant.now(), user.getEmail());
         } catch (RazorpayException e) {
             log.error("Razorpay refund failed. transactionId={}, paymentId={}",
                     payment.getTransactionId(), payment.getId(), e);
