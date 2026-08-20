@@ -8,7 +8,10 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Entity
 @Setter
@@ -40,4 +43,17 @@ public class UserAddress {
     private Instant createdAt;
     @LastModifiedDate
     private Instant updatedAt;
+
+    public String getFullAddress() {
+        return Stream.of(
+                        addressLineOne,
+                        addressLineTwo,
+                        city,
+                        state,
+                        country,
+                        postalCode
+                ).filter(Objects::nonNull)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.joining(", "));
+    }
 }

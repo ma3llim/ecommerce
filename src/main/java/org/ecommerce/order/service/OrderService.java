@@ -1,7 +1,6 @@
 package org.ecommerce.order.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.razorpay.RazorpayException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.entities.User;
@@ -16,6 +15,11 @@ import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.enums.DiscountType;
 import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
+import org.ecommerce.common.notification.dtos.NotificationRequest;
+import org.ecommerce.common.notification.dtos.OrderItemEmailData;
+import org.ecommerce.common.notification.enums.channel.NotificationChannel;
+import org.ecommerce.common.notification.enums.channel.NotificationEvent;
+import org.ecommerce.common.notification.service.NotificationService;
 import org.ecommerce.coupon.entities.Coupon;
 import org.ecommerce.coupon.repository.CouponRepository;
 import org.ecommerce.order.dtos.request.CreateOrderRequest;
@@ -38,9 +42,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -58,12 +60,12 @@ public class OrderService {
     private final PaymentService paymentService;
     private final ProductVariantRepository productVariantRepository;
     private final OrderFinalizationService orderFinalizationService;
-    private final ShipmentService shipmentService;
     private final ShipmentTrackingEventRepository shipmentTrackingEventRepository;
     private final ShipmentRepository shipmentRepository;
+    private final NotificationService notificationService;
 
     @Transactional
-    public OrderResponse createOrder(CreateOrderRequest request, Authentication authentication) throws RazorpayException {
+    public OrderResponse createOrder(CreateOrderRequest request, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
         User user = userRepository.findById(userId).orElseThrow(() -> {
             log.warn("Create order failed: user not found, userId={}", userId);
@@ -222,6 +224,11 @@ public class OrderService {
                 order.getId(), order.getOrderNumber(), userId, request.paymentMethod(), subTotal, discountAmount,
                 shippingAmount, taxAmount, totalAmount);
 
+        List<OrderItemEmailData> orderItemEmailData = orderItems.stream().map(orderItem ->
+                objectMapper.convertValue(orderItem, OrderItemEmailData.class)).toList();
+
+        buildOrderPlacedData(order, user.getFullName(), orderItemEmailData, address.getFullAddress(), user.getEmail());
+
         return OrderResponse.builder()
                 .orderId(order.getId())
                 .orderNumber(order.getOrderNumber())
@@ -299,7 +306,7 @@ public class OrderService {
             log.warn("Get order details failed: shipment not found. orderId={}", order.getId());
             return new ResourceNotFoundException("Shipment not found");
         });
-        
+
         List<ShipmentTrackingEvent> shipmentTrackingEvents = shipmentTrackingEventRepository
                 .findByShipmentIdOrderByEventTimeDesc(shipment.getId());
 
@@ -380,4 +387,41 @@ public class OrderService {
 
         return objectMapper.convertValue(order, OrderResponse.class);
     }
+
+    public void buildOrderPlacedData(
+            Order order, String fullName, List<OrderItemEmailData> items, String shippingAddress, String recipientEmail
+    ) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("customerName", fullName);
+        data.put("orderNumber", order.getOrderNumber());
+        data.put("placedAt", order.getCreatedAt());
+        data.put("items", items);
+        data.put("subtotal", getSubTotal(order));
+        data.put("discountAmount", order.getDiscountAmount().setScale(2, RoundingMode.HALF_UP));
+        data.put("shippingAmount", order.getShippingAmount().setScale(2, RoundingMode.HALF_UP));
+        data.put("taxAmount", order.getTaxAmount().setScale(2, RoundingMode.HALF_UP));
+        data.put("totalAmount", order.getTotalAmount().setScale(2, RoundingMode.HALF_UP));
+
+        data.put("paymentStatus", order.getPaymentStatus());
+        data.put("shippingAddress", shippingAddress);
+
+        NotificationRequest request = NotificationRequest.builder()
+                .channel(NotificationChannel.EMAIL)
+                .event(NotificationEvent.ORDER_PLACED)
+                .recipient(recipientEmail)
+                .data(data)
+                .build();
+
+        notificationService.send(request);
+    }
+
+    public BigDecimal getSubTotal(Order order) {
+        return order.getTotalAmount()
+                .subtract(order.getDiscountAmount())
+                .subtract(order.getShippingAmount())
+                .subtract(order.getTaxAmount())
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+
 }
