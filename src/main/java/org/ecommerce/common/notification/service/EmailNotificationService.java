@@ -34,6 +34,12 @@ public class EmailNotificationService {
             case USER_REGISTERED -> EmailTemplate.REGISTRATION_WELCOME;
             case OTP_VERIFICATION -> EmailTemplate.OTP_VERIFICATION;
             case FORGET_PASSWORD_VERIFICATION -> EmailTemplate.FORGET_PASSWORD_VERIFICATION;
+            case ORDER_PLACED -> EmailTemplate.ORDER_PLACED;
+            case PAYMENT_SUCCESS -> EmailTemplate.PAYMENT_SUCCESS;
+            case PAYMENT_FAILED -> EmailTemplate.PAYMENT_FAILED;
+            case ORDER_DELIVERED -> EmailTemplate.ORDER_DELIVERED;
+            case ORDER_CANCELLED -> EmailTemplate.ORDER_CANCELLED;
+            case REFUND_COMPLETED -> EmailTemplate.REFUND_COMPLETED;
 
             default -> throw new IllegalArgumentException(
                     "Unsupported email notification event: " + event
