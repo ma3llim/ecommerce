@@ -1,7 +1,6 @@
 package org.ecommerce.order.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.razorpay.RazorpayException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.auth.entities.User;
@@ -16,6 +15,12 @@ import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.enums.DiscountType;
 import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
+import org.ecommerce.common.notification.dtos.NotificationRequest;
+import org.ecommerce.common.notification.dtos.OrderItemEmailData;
+import org.ecommerce.common.notification.enums.channel.NotificationChannel;
+import org.ecommerce.common.notification.enums.channel.NotificationEvent;
+import org.ecommerce.common.notification.service.NotificationService;
+import org.ecommerce.common.utils.DateTimeUtil;
 import org.ecommerce.coupon.entities.Coupon;
 import org.ecommerce.coupon.repository.CouponRepository;
 import org.ecommerce.order.dtos.request.CreateOrderRequest;
@@ -38,9 +43,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -58,12 +61,12 @@ public class OrderService {
     private final PaymentService paymentService;
     private final ProductVariantRepository productVariantRepository;
     private final OrderFinalizationService orderFinalizationService;
-    private final ShipmentService shipmentService;
     private final ShipmentTrackingEventRepository shipmentTrackingEventRepository;
     private final ShipmentRepository shipmentRepository;
+    private final NotificationService notificationService;
 
     @Transactional
-    public OrderResponse createOrder(CreateOrderRequest request, Authentication authentication) throws RazorpayException {
+    public OrderResponse createOrder(CreateOrderRequest request, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
         User user = userRepository.findById(userId).orElseThrow(() -> {
             log.warn("Create order failed: user not found, userId={}", userId);
@@ -222,6 +225,11 @@ public class OrderService {
                 order.getId(), order.getOrderNumber(), userId, request.paymentMethod(), subTotal, discountAmount,
                 shippingAmount, taxAmount, totalAmount);
 
+        List<OrderItemEmailData> orderItemEmailData = orderItems.stream().map(orderItem ->
+                objectMapper.convertValue(orderItem, OrderItemEmailData.class)).toList();
+
+        sendOrderPlacedMail(order, user.getFullName(), orderItemEmailData, address.getFullAddress(), user.getEmail());
+
         return OrderResponse.builder()
                 .orderId(order.getId())
                 .orderNumber(order.getOrderNumber())
@@ -299,7 +307,7 @@ public class OrderService {
             log.warn("Get order details failed: shipment not found. orderId={}", order.getId());
             return new ResourceNotFoundException("Shipment not found");
         });
-        
+
         List<ShipmentTrackingEvent> shipmentTrackingEvents = shipmentTrackingEventRepository
                 .findByShipmentIdOrderByEventTimeDesc(shipment.getId());
 
@@ -348,6 +356,10 @@ public class OrderService {
     @Transactional
     public OrderResponse cancelOrder(UUID orderId, Authentication authentication) {
         UUID userId = ((User) authentication.getPrincipal()).getId();
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("Cancel order failed: user not found. orderId={}, userId={}", orderId, userId);
+            return new ResourceNotFoundException("User not found");
+        });
 
         Order order = orderRepository.findByIdAndUserId(orderId, userId).orElseThrow(() -> {
             log.warn("Cancel order failed: order not found. orderId={}, userId={}", orderId, userId);
@@ -362,7 +374,7 @@ public class OrderService {
                 new ResourceNotFoundException("Payment not found")
         );
 
-        if (payment.getPaymentStatus() == PaymentStatus.CAPTURED) {
+        if (payment.getPaymentMethod() == PaymentMethod.RAZORPAY && payment.getPaymentStatus() == PaymentStatus.CAPTURED) {
             log.info("Refunding captured payment for cancelled order. orderId={}, paymentId={}",
                     orderId, payment.getId());
             paymentService.refundPayment(payment);
@@ -371,6 +383,7 @@ public class OrderService {
         int updatedRows = productVariantRepository.restoreStock(order.getId());
 
         if (updatedRows == 0) {
+            log.warn("Stock restoration failed: no stock rows updated. orderId={}", order.getId());
             throw new BadRequestException("Unable to restore stock");
         }
 
@@ -378,6 +391,63 @@ public class OrderService {
 
         orderRepository.save(order);
 
+        sendOrderCancelledMail(user.getFullName(), order.getOrderNumber(), order.getTotalAmount(), Instant.now(), user.getEmail());
+        
         return objectMapper.convertValue(order, OrderResponse.class);
+    }
+
+    public void sendOrderPlacedMail(
+            Order order, String fullName, List<OrderItemEmailData> items, String shippingAddress, String recipientEmail
+    ) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("customerName", fullName);
+        data.put("orderNumber", order.getOrderNumber());
+        data.put("placedAt", order.getCreatedAt());
+        data.put("items", items);
+        data.put("subtotal", getSubTotal(order));
+        data.put("discountAmount", order.getDiscountAmount().setScale(2, RoundingMode.HALF_UP));
+        data.put("shippingAmount", order.getShippingAmount().setScale(2, RoundingMode.HALF_UP));
+        data.put("taxAmount", order.getTaxAmount().setScale(2, RoundingMode.HALF_UP));
+        data.put("totalAmount", order.getTotalAmount().setScale(2, RoundingMode.HALF_UP));
+
+        data.put("paymentStatus", order.getPaymentStatus());
+        data.put("shippingAddress", shippingAddress);
+
+        NotificationRequest request = NotificationRequest.builder()
+                .channel(NotificationChannel.EMAIL)
+                .event(NotificationEvent.ORDER_PLACED)
+                .recipient(recipientEmail)
+                .data(data)
+                .build();
+
+        notificationService.send(request);
+    }
+
+    public void sendOrderCancelledMail(
+            String fullName, String orderNumber, BigDecimal amount, Instant cancelledAt, String recipientEmail
+    ) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("customerName", fullName);
+        data.put("orderNumber", orderNumber);
+        data.put("amount", amount);
+        data.put("cancellationReason", "Order cancelled by customer");
+        data.put("paidAt", DateTimeUtil.format(cancelledAt));
+
+        NotificationRequest request = NotificationRequest.builder()
+                .channel(NotificationChannel.EMAIL)
+                .event(NotificationEvent.ORDER_CANCELLED)
+                .recipient(recipientEmail)
+                .data(data)
+                .build();
+
+        notificationService.send(request);
+    }
+
+    public BigDecimal getSubTotal(Order order) {
+        return order.getTotalAmount()
+                .subtract(order.getDiscountAmount())
+                .subtract(order.getShippingAmount())
+                .subtract(order.getTaxAmount())
+                .setScale(2, RoundingMode.HALF_UP);
     }
 }

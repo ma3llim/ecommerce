@@ -3,9 +3,15 @@ package org.ecommerce.order.service.admin;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ecommerce.auth.entities.User;
+import org.ecommerce.auth.repository.UserRepository;
 import org.ecommerce.common.dtos.PageResponse;
 import org.ecommerce.common.exception.BadRequestException;
 import org.ecommerce.common.exception.ResourceNotFoundException;
+import org.ecommerce.common.notification.dtos.NotificationRequest;
+import org.ecommerce.common.notification.enums.channel.NotificationChannel;
+import org.ecommerce.common.notification.enums.channel.NotificationEvent;
+import org.ecommerce.common.notification.service.NotificationService;
 import org.ecommerce.order.dtos.admin.request.CreateShipmentRequest;
 import org.ecommerce.order.dtos.admin.request.UpdateShipmentStatusRequest;
 import org.ecommerce.order.dtos.admin.response.ShipmentResponse;
@@ -26,7 +32,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -36,6 +44,8 @@ public class AdminShipmentService {
     private final ShipmentRepository shipmentRepository;
     private final OrderRepository orderRepository;
     private final ShipmentTrackingEventRepository trackingEventRepository;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
     public PageResponse<ShipmentResponse> getAllShipments(
@@ -209,6 +219,14 @@ public class AdminShipmentService {
 
             order.setOrderStatus(OrderStatus.DELIVERED);
             orderRepository.save(order);
+
+            User user = userRepository.findById(order.getUserId()).orElseThrow(() -> {
+                log.warn("shipment request failed: user not found. orderId={}, userId={}, shipmentId={}",
+                        order.getId(), order.getUserId(), shipmentId);
+                return new ResourceNotFoundException("User not found");
+            });
+
+            sendOrderCompleteMail(user.getFullName(), order.getOrderNumber(), user.getEmail());
         }
 
         log.info("Shipment status updated: shipmentId={}, {} -> {}, location={}",
@@ -251,5 +269,20 @@ public class AdminShipmentService {
                     currentStatus, newStatus);
             throw new BadRequestException("Invalid shipment status transition: " + currentStatus + " -> " + newStatus);
         }
+    }
+
+    public void sendOrderCompleteMail(String fullName, String orderNumber, String recipientEmail) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("customerName", fullName);
+        data.put("orderNumber", orderNumber);
+
+        NotificationRequest request = NotificationRequest.builder()
+                .channel(NotificationChannel.EMAIL)
+                .event(NotificationEvent.ORDER_DELIVERED)
+                .recipient(recipientEmail)
+                .data(data)
+                .build();
+
+        notificationService.send(request);
     }
 }

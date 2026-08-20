@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Order Placed</title>
+</head>
+
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f8;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #1f2937;
+">
+
+<table border="0" cellpadding="0" cellspacing="0"
+       style="background-color: #f4f6f8; padding: 40px 16px;"
+       width="100%">
+
+    <tr>
+        <td align="center">
+
+            <!-- Main Container -->
+            <table border="0" cellpadding="0" cellspacing="0"
+                   style="
+                       max-width: 600px;
+                       background-color: #ffffff;
+                       border-radius: 10px;
+                       overflow: hidden;
+                   "
+                   width="100%">
+
+                <!-- Header -->
+                <tr>
+                    <td align="center"
+                        style="
+                            background-color: #111827;
+                            padding: 28px 24px;
+                        ">
+
+                        <div style="
+                            font-size: 24px;
+                            font-weight: bold;
+                            color: #ffffff;
+                        ">
+                            E-Commerce
+                        </div>
+
+                    </td>
+                </tr>
+
+                <!-- Content -->
+                <tr>
+                    <td style="padding: 40px 36px;">
+
+                        <h1 style="
+                            margin: 0 0 20px 0;
+                            font-size: 26px;
+                            line-height: 1.3;
+                            color: #111827;
+                        ">
+                            Order Placed Successfully 🎉
+                        </h1>
+
+                        <p style="
+                            margin: 0 0 16px 0;
+                            font-size: 16px;
+                            line-height: 1.6;
+                            color: #4b5563;
+                        ">
+                            Hello
+                            <strong th:text="${customerName}">
+                                Customer
+                            </strong>,
+                        </p>
+
+                        <p style="
+                            margin: 0 0 24px 0;
+                            font-size: 16px;
+                            line-height: 1.6;
+                            color: #4b5563;
+                        ">
+                            Thank you for your order. Your order has been
+                            successfully placed and is being processed.
+                        </p>
+
+                        <!-- Order Information -->
+                        <table border="0" cellpadding="0" cellspacing="0"
+                               style="
+                                   background-color: #f9fafb;
+                                   border: 1px solid #e5e7eb;
+                                   border-radius: 8px;
+                               "
+                               width="100%">
+
+                            <tr>
+                                <td style="padding: 20px;">
+
+                                    <p style="
+                                        margin: 0 0 8px 0;
+                                        font-size: 13px;
+                                        font-weight: bold;
+                                        color: #6b7280;
+                                        letter-spacing: 1px;
+                                    ">
+                                        ORDER NUMBER
+                                    </p>
+
+                                    <p style="
+                                        margin: 0;
+                                        font-size: 20px;
+                                        font-weight: bold;
+                                        color: #111827;
+                                    "
+                                       th:text="${orderNumber}">
+                                        ORD-10001
+                                    </p>
+
+                                </td>
+                            </tr>
+
+                        </table>
+
+                        <!-- Items -->
+                        <h2 style="
+                            margin: 28px 0 16px 0;
+                            font-size: 18px;
+                            color: #111827;
+                        ">
+                            Order Items
+                        </h2>
+
+                        <table border="0" cellpadding="0" cellspacing="0"
+                               width="100%"
+                               style="
+                                   border-collapse: collapse;
+                                   font-size: 14px;
+                               ">
+
+                            <thead>
+                            <tr>
+                                <th align="left"
+                                    style="
+                                        padding: 10px 6px;
+                                        border-bottom: 1px solid #e5e7eb;
+                                        color: #6b7280;
+                                    ">
+                                    Product
+                                </th>
+
+                                <th align="center"
+                                    style="
+                                        padding: 10px 6px;
+                                        border-bottom: 1px solid #e5e7eb;
+                                        color: #6b7280;
+                                    ">
+                                    Qty
+                                </th>
+
+                                <th align="right"
+                                    style="
+                                        padding: 10px 6px;
+                                        border-bottom: 1px solid #e5e7eb;
+                                        color: #6b7280;
+                                    ">
+                                    Total
+                                </th>
+                            </tr>
+                            </thead>
+
+                            <tbody>
+
+                            <tr th:each="item : ${items}">
+
+                                <td style="
+                                    padding: 12px 6px;
+                                    border-bottom: 1px solid #f3f4f6;
+                                    color: #374151;
+                                "
+                                    th:text="${item.productName}">
+                                    Product
+                                </td>
+
+                                <td align="center"
+                                    style="
+                                        padding: 12px 6px;
+                                        border-bottom: 1px solid #f3f4f6;
+                                        color: #374151;
+                                    "
+                                    th:text="${item.quantity}">
+                                    1
+                                </td>
+
+                                <td align="right"
+                                    style="
+                                        padding: 12px 6px;
+                                        border-bottom: 1px solid #f3f4f6;
+                                        color: #374151;
+                                    "
+                                    th:text="${item.totalPrice}">
+                                    ₹0.00
+                                </td>
+
+                            </tr>
+
+                            </tbody>
+
+                        </table>
+
+                        <!-- Summary -->
+                        <h2 style="
+                            margin: 28px 0 16px 0;
+                            font-size: 18px;
+                            color: #111827;
+                        ">
+                            Order Summary
+                        </h2>
+
+                        <p style="
+                            margin: 0 0 8px 0;
+                            font-size: 14px;
+                            color: #6b7280;
+                        ">
+                            Subtotal:
+                            <strong th:text="${subtotal}"
+                                    style="color: #111827;">
+                                ₹0.00
+                            </strong>
+                        </p>
+
+                        <p style="
+                            margin: 0 0 8px 0;
+                            font-size: 14px;
+                            color: #6b7280;
+                        ">
+                            Discount:
+                            <strong th:text="${discountAmount}"
+                                    style="color: #111827;">
+                                ₹0.00
+                            </strong>
+                        </p>
+
+                        <p style="
+                            margin: 0 0 8px 0;
+                            font-size: 14px;
+                            color: #6b7280;
+                        ">
+                            Shipping:
+                            <strong th:text="${shippingAmount}"
+                                    style="color: #111827;">
+                                ₹0.00
+                            </strong>
+                        </p>
+
+                        <p style="
+                            margin: 0 0 8px 0;
+                            font-size: 14px;
+                            color: #6b7280;
+                        ">
+                            Tax:
+                            <strong th:text="${taxAmount}"
+                                    style="color: #111827;">
+                                ₹0.00
+                            </strong>
+                        </p>
+
+                        <p style="
+                            margin: 16px 0 0 0;
+                            padding-top: 16px;
+                            border-top: 1px solid #e5e7eb;
+                            font-size: 17px;
+                            color: #111827;
+                        ">
+                            <strong>
+                                Total:
+                                <span th:text="${totalAmount}">
+                                    ₹0.00
+                                </span>
+                            </strong>
+                        </p>
+
+                        <!-- Payment Status -->
+                        <table border="0" cellpadding="0" cellspacing="0"
+                               style="
+                                   margin-top: 24px;
+                                   background-color: #f9fafb;
+                                   border: 1px solid #e5e7eb;
+                                   border-radius: 8px;
+                               "
+                               width="100%">
+
+                            <tr>
+                                <td style="padding: 16px 18px;">
+
+                                    <p style="
+                                        margin: 0;
+                                        font-size: 14px;
+                                        color: #4b5563;
+                                    ">
+                                        <strong>Payment Status:</strong>
+                                        <span th:text="${paymentStatus}"
+                                              style="color: #111827;">
+                                            PENDING
+                                        </span>
+                                    </p>
+
+                                </td>
+                            </tr>
+
+                        </table>
+
+                        <!-- Shipping Address -->
+                        <h2 style="
+                            margin: 28px 0 12px 0;
+                            font-size: 18px;
+                            color: #111827;
+                        ">
+                            Shipping Address
+                        </h2>
+
+                        <p style="
+                            margin: 0;
+                            font-size: 14px;
+                            line-height: 1.6;
+                            color: #6b7280;
+                        "
+                           th:text="${shippingAddress}">
+                            Shipping address
+                        </p>
+
+                    </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                    <td align="center"
+                        style="
+                            background-color: #f9fafb;
+                            border-top: 1px solid #e5e7eb;
+                            padding: 24px;
+                        ">
+
+                        <p style="
+                            margin: 0 0 8px 0;
+                            font-size: 13px;
+                            color: #6b7280;
+                        ">
+                            © 2026 E-Commerce. All rights reserved.
+                        </p>
+
+                        <p style="
+                            margin: 0;
+                            font-size: 12px;
+                            color: #9ca3af;
+                        ">
+                            This is an automated email. Please do not reply
+                            to this message.
+                        </p>
+
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+
+</table>
+
+</body>
+</html>

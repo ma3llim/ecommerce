@@ -35,6 +35,9 @@ public class Payment {
     @Column(name = "transaction_id", unique = true)
     private String transactionId;
 
+    @Column(name = "refund_id")
+    private String refundId;
+
     @Column(nullable = false, length = 3)
     private String currency;
 
@@ -51,6 +54,10 @@ public class Payment {
 
     @Column(name = "paid_at")
     private Instant paidAt;
+
+
+    @Column(name = "refund_at")
+    private Instant refundAt;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
