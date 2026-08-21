@@ -2,7 +2,7 @@ package org.ecommerce.common.config.security;
 
 import lombok.RequiredArgsConstructor;
 import org.ecommerce.auth.security.JwtAuthenticationFilter;
-import org.ecommerce.common.config.filter.RateLimitFilter;
+import org.ecommerce.common.config.rate.RateLimitFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;

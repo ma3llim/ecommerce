@@ -1,9 +1,11 @@
-package org.ecommerce.common.config.filter;
+package org.ecommerce.common.config.rate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
+import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.ConsumptionProbe;
+import io.github.bucket4j.distributed.proxy.ProxyManager;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ecommerce.common.config.properties.RateLimitProperties;
+import org.ecommerce.common.constants.RedisKeyConstants;
 import org.ecommerce.common.response.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -18,7 +21,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
+import java.nio.charset.StandardCharsets;
 
 @Component
 @RequiredArgsConstructor
@@ -26,23 +29,22 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RateLimitFilter extends OncePerRequestFilter {
     private final ObjectMapper objectMapper;
     private final RateLimitProperties rateLimitProperties;
-    private final ConcurrentHashMap<String, Bucket> buckets;
+    private final ProxyManager<byte[]> buckets;
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request, HttpServletResponse response, FilterChain filterChain
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain
     ) throws ServletException, IOException {
         String clientIp = getClientIp(request);
         String path = request.getRequestURI();
 
-        log.debug("Rate limit check. clientIp={}, path={}", clientIp, path);
-
         Bandwidth limit = isAuthEndpoint(path) ? createBandwidth(rateLimitProperties.getAuth())
-                : createBandwidth(rateLimitProperties.getDefaults());
+                : createBandwidth(rateLimitProperties.getDefaultLimit());
 
-        String bucketKey = clientIp + ":" + getLimitType(path);
+        String bucketKey = RedisKeyConstants.RATE_LIMIT + getLimitType(path) + ":" + clientIp;
 
-        Bucket bucket = buckets.computeIfAbsent(bucketKey, key -> Bucket.builder().addLimit(limit).build());
+        BucketConfiguration configuration = BucketConfiguration.builder().addLimit(limit).build();
+
+        Bucket bucket = buckets.builder().build(bucketKey.getBytes(StandardCharsets.UTF_8), () -> configuration);
 
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
 
@@ -73,7 +75,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return Bandwidth.builder()
                 .capacity(config.getCapacity())
                 .refillGreedy(
-                        config.getRefillToken(),
+                        config.getRefillTokens(),
                         config.getRefillDuration()
                 )
                 .build();

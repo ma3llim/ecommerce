@@ -12,13 +12,13 @@ import java.time.Duration;
 public class RateLimitProperties {
 
     private Limit auth;
-    private Limit defaults;
+    private Limit defaultLimit;
 
     @Getter
     @Setter
     public static class Limit {
         private long capacity;
-        private long refillToken;
+        private long refillTokens;
         private Duration refillDuration;
     }
 }
