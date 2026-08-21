@@ -87,3 +87,14 @@ management:
     web:
       exposure:
         include: health,info,prometheus
+
+rate-limit:
+  default:
+    capacity: 30
+    refill-token: 30
+    refill-duration: 1m
+
+  auth:
+    capacity: 5
+    refill-token: 5
+    refill-duration: 1m
