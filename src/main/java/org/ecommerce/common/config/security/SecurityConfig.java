@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .sessionManagement(sessionManagement ->
                         sessionManagement.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS))
+                .httpBasic(Customizer.withDefaults())
                 .authorizeHttpRequests(requestMatcherRegistry ->
                         requestMatcherRegistry.requestMatchers(
                                         SecurityConstants.AUTH_REGISTER,
@@ -50,6 +51,8 @@ public class SecurityConfig {
                                         SecurityConstants.SWAGGER_UI_RESOURCES,
                                         SecurityConstants.OPEN_API_DOCS
                                 ).permitAll()
+                                .requestMatchers(SecurityConstants.ACTUATOR_PROMETHEUS)
+                                .hasRole("MONITORING")
                                 .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex

@@ -10,7 +10,6 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-  #    show-sql: true
 
   mail:
     host: smtp.gmail.com
@@ -52,11 +51,16 @@ app:
     cloud-name: ${CLOUDINARY_CLOUD_NAME}
     api-key: ${CLOUDINARY_API_KEY}
     api-secret: ${CLOUDINARY_API_SECRET}
+
   razorpay:
     key-id: ${RAZORPAY_KEY_ID}
     key-secret: ${RAZORPAY_KEY_SECRET}
     webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}
     currency: INR
+
+  monitoring:
+    username: ${MONITORING_USERNAME}
+    password: ${MONITORING_PASSWORD}
 
 springdoc:
   api-docs:
@@ -71,3 +75,15 @@ springdoc:
 
   packages-to-scan:
     - org.ecommerce
+
+management:
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

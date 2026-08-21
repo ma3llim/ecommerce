@@ -35,7 +35,7 @@ public class ProductController {
         return ResponseEntity.ok(
                 ApiSuccessResponse.<PageResponse<ProductListResponse>>builder()
                         .success(true)
-                        .message("Products fetched successfully\n")
+                        .message("Products fetched successfully")
                         .data(responsePageResponse)
                         .path(request.getRequestURI()).build()
         );
